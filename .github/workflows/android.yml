@@ -2,18 +2,33 @@ name: Android Build & Package
 
 on:
   push:
-    branches: [ "main", "master", "develop" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main", "master", "develop" ]
+    branches: [ "main", "master" ]
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build ChordMap APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build React Web App
+        run: npm run build
+
+      - name: Sync Capacitor Android Config
+        run: npx cap sync android
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -23,7 +38,7 @@ jobs:
           cache: 'gradle'
 
       - name: Decode signing keystore or generate fallback
-        working-directory: acordes-y-tabs
+        working-directory: android
         run: |
           if [ -f "debug.keystore.base64" ]; then
             echo "Decoding debug.keystore.base64..."
@@ -34,51 +49,22 @@ jobs:
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Replace App Icons with Chordmap Logo
-        run: |
-          echo "Replacing default icons in android app with Chordmap Logo PNG..."
-          RES_DIR="$GITHUB_WORKSPACE/acordes-y-tabs/app/src/main/res"
-          SRC_IMAGE="$GITHUB_WORKSPACE/Logo/ChatGPT Image Jun 23, 2026, 12_38_43 PM.png"
-          
-          # Check if the source image file exists
-          if [ -f "$SRC_IMAGE" ]; then
-            # Delete any existing adaptive webp or XML launcher icons from anydpi-v26
-            rm -f "$RES_DIR"/mipmap-anydpi-v26/ic_launcher.xml
-            rm -f "$RES_DIR"/mipmap-anydpi-v26/ic_launcher_round.xml
-            
-            # Copy new PNG launcher files to drawable and density-specific mipmap folders
-            cp "$SRC_IMAGE" "$RES_DIR/drawable/ic_launcher.png"
-            cp "$SRC_IMAGE" "$RES_DIR/drawable/ic_launcher_round.png"
-            
-            for folder in "$RES_DIR"/mipmap-*; do
-              if [ -d "$folder" ]; then
-                # Delete any old webp versions in this folder
-                rm -f "$folder"/ic_launcher.webp
-                rm -f "$folder"/ic_launcher_round.webp
-                
-                # Copy the new PNG version
-                cp "$SRC_IMAGE" "$folder"/ic_launcher.png
-                cp "$SRC_IMAGE" "$folder"/ic_launcher_round.png
-                echo "Replaced icons in $folder with custom PNG."
-              fi
-            done
-          else
-            echo "Warning: Custom logo source image not found at $SRC_IMAGE. Using existing or default icons."
-          fi
+      - name: Replace App Icons with ChordMap Logo
+        run: npx tsx src/utils/setup-logos.ts
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: wrapper # falls back to standard Gradle if wrapper is missing
-          build-root-directory: acordes-y-tabs
+          gradle-version: wrapper
+          build-root-directory: android
 
       - name: Build Debug APK
-        working-directory: acordes-y-tabs
-        run: gradle assembleDebug --stacktrace --no-daemon
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Archive APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Chordmap-Debug-APK
-          path: acordes-y-tabs/app/build/outputs/apk/debug/*.apk
+          name: ChordMap-Debug-APK
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn

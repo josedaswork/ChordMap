@@ -1,5 +1,5 @@
 {
-  "name": "Chordmap",
+  "name": "ChordMap",
   "description": "Editor interactivo de acordes y tablaturas con sincronización bidireccional en la nube.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const rootPath = process.cwd();
-const resDir = path.join(rootPath, 'acordes-y-tabs', 'app', 'src', 'main', 'res');
+const resDir = path.join(rootPath, 'android', 'app', 'src', 'main', 'res');
 const srcImage = path.join(rootPath, 'Logo', 'ChatGPT Image Jun 23, 2026, 12_38_43 PM.png');
 
 function configureAppIcons() {
@@ -14,7 +14,6 @@ function configureAppIcons() {
 
   // Define densities/folders
   const targetDirs = [
-    'drawable',
     'mipmap-hdpi',
     'mipmap-mdpi',
     'mipmap-xhdpi',
@@ -28,7 +27,7 @@ function configureAppIcons() {
   filesToDelete.forEach(file => {
     const filePath = path.join(anyDpiDir, file);
     if (fs.existsSync(filePath)) {
-      console.log(`[Icon Setup] Deleting old adaptive launcher XML: ${filePath}`);
+      console.log(`[Icon Setup] Deleting style-override launcher XML: ${filePath}`);
       fs.unlinkSync(filePath);
     }
   });
@@ -41,8 +40,8 @@ function configureAppIcons() {
       return;
     }
 
-    // Clean existing webp versions to avoid duplicates/overriding
-    const oldIcons = ['ic_launcher.webp', 'ic_launcher_round.webp'];
+    // Clean existing versions
+    const oldIcons = ['ic_launcher.webp', 'ic_launcher_round.webp', 'ic_launcher_foreground.webp'];
     oldIcons.forEach(icon => {
       const iconPath = path.join(dirPath, icon);
       if (fs.existsSync(iconPath)) {
@@ -52,7 +51,7 @@ function configureAppIcons() {
     });
 
     // Copy new png files
-    const newIcons = ['ic_launcher.png', 'ic_launcher_round.png'];
+    const newIcons = ['ic_launcher.png', 'ic_launcher_round.png', 'ic_launcher_foreground.png'];
     newIcons.forEach(icon => {
       const destPath = path.join(dirPath, icon);
       fs.copyFileSync(srcImage, destPath);

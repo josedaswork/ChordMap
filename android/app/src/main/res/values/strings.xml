@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ChordMap</string>
+    <string name="title_activity_main">ChordMap</string>
+    <string name="package_name">com.chordmap.app</string>
+    <string name="custom_url_scheme">com.chordmap.app</string>
+</resources>
