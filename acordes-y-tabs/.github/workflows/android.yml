@@ -33,6 +33,38 @@ jobs:
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
+      - name: Replace App Icons with Chordmap Logo
+        run: |
+          echo "Replacing default icons in android app with Chordmap Logo PNG..."
+          RES_DIR="acordes-y-tabs/app/src/main/res"
+          SRC_IMAGE="Logo/ChatGPT Image Jun 23, 2026, 12_38_43 PM.png"
+          
+          # Check if the source image file exists
+          if [ -f "$SRC_IMAGE" ]; then
+            # Delete any existing adaptive webp or XML launcher icons from anydpi-v26
+            rm -f "$RES_DIR"/mipmap-anydpi-v26/ic_launcher.xml
+            rm -f "$RES_DIR"/mipmap-anydpi-v26/ic_launcher_round.xml
+            
+            # Copy new PNG launcher files to drawable and density-specific mipmap folders
+            cp "$SRC_IMAGE" "$RES_DIR/drawable/ic_launcher.png"
+            cp "$SRC_IMAGE" "$RES_DIR/drawable/ic_launcher_round.png"
+            
+            for folder in "$RES_DIR"/mipmap-*; do
+              if [ -d "$folder" ]; then
+                # Delete any old webp versions in this folder
+                rm -f "$folder"/ic_launcher.webp
+                rm -f "$folder"/ic_launcher_round.webp
+                
+                # Copy the new PNG version
+                cp "$SRC_IMAGE" "$folder"/ic_launcher.png
+                cp "$SRC_IMAGE" "$folder"/ic_launcher_round.png
+                echo "Replaced icons in $folder with custom PNG."
+              fi
+            done
+          else
+            echo "Warning: Custom logo source image not found at $SRC_IMAGE. Using existing or default icons."
+          fi
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
