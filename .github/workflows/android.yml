@@ -23,6 +23,7 @@ jobs:
           cache: 'gradle'
 
       - name: Decode signing keystore or generate fallback
+        working-directory: acordes-y-tabs
         run: |
           if [ -f "debug.keystore.base64" ]; then
             echo "Decoding debug.keystore.base64..."
@@ -36,8 +37,8 @@ jobs:
       - name: Replace App Icons with Chordmap Logo
         run: |
           echo "Replacing default icons in android app with Chordmap Logo PNG..."
-          RES_DIR="acordes-y-tabs/app/src/main/res"
-          SRC_IMAGE="Logo/ChatGPT Image Jun 23, 2026, 12_38_43 PM.png"
+          RES_DIR="$GITHUB_WORKSPACE/acordes-y-tabs/app/src/main/res"
+          SRC_IMAGE="$GITHUB_WORKSPACE/Logo/ChatGPT Image Jun 23, 2026, 12_38_43 PM.png"
           
           # Check if the source image file exists
           if [ -f "$SRC_IMAGE" ]; then
@@ -69,13 +70,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: wrapper # falls back to standard Gradle if wrapper is missing
+          build-root-directory: acordes-y-tabs
 
       - name: Build Debug APK
+        working-directory: acordes-y-tabs
         run: gradle assembleDebug --stacktrace --no-daemon
 
       - name: Archive APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AcordesYTabs-Debug-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: Chordmap-Debug-APK
+          path: acordes-y-tabs/app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
