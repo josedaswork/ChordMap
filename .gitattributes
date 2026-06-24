@@ -1,0 +1,2 @@
+# Prevent git from corrupting binary files like gradle-wrapper.jar with line ending translations
+*.jar binary
