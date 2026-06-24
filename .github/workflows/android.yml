@@ -10,6 +10,8 @@ jobs:
   build:
     name: Build ChordMap APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout the code
@@ -70,3 +72,26 @@ jobs:
           name: ChordMap-Debug-APK
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: latest
+          name: "ChordMap Pro (APK) - Última Compilación"
+          body: |
+            ### 📱 ChordMap Pro Autocompilado
+            ¡Aquí tienes la última versión autocompilada de ChordMap Pro lista para instalar en tu dispositivo Android!
+            
+            **Características de esta versión:**
+            - 🎨 Interfaz moderna (Neo-Brutalist).
+            - ☁️ Sincronización segura y en tiempo real con Google Sheets.
+            - 🎸 Soporte completo para acordes con pulsos de tiempo y tablaturas interactivas de 6 cuerdas con adornos (hammer-on, pull-off, bends, etc.).
+            
+            *Nota: Al instalar, si tu dispositivo te advierte sobre una fuente desconocida, puedes darle permiso con total seguridad ya que es una compilación propia.*
+          draft: false
+          prerelease: false
+          files: |
+            android/app/build/outputs/apk/debug/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
