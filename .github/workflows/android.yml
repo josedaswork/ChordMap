@@ -8,73 +8,79 @@ on:
 
 jobs:
   build:
-    name: Build ChordMap APK
+    name: Build & Test Android Application
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout the code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install Node Dependencies
-        run: npm ci
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci || npm install
 
       - name: Build React Web App
         run: npm run build
 
-      - name: Sync Capacitor Android Config
-        run: npx cap sync android
+      - name: Sync with Capacitor
+        run: npx cap sync
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
-
-      - name: Decode signing keystore or generate fallback
+      - name: Recreate Debug Keystore
         working-directory: android
         run: |
           if [ -f "debug.keystore.base64" ]; then
-            echo "Decoding debug.keystore.base64..."
-            base64 -d debug.keystore.base64 > debug.keystore || true
+            echo "Recreating debug.keystore from base64..."
+            base64 --decode debug.keystore.base64 > debug.keystore || base64 -d debug.keystore.base64 > debug.keystore || echo "Base64 decode failed"
           fi
           if [ ! -f "debug.keystore" ]; then
-            echo "debug.keystore not found, generating fallback debug.keystore..."
+            echo "debug.keystore not found, generating a new fallback one with keytool..."
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
       - name: Replace App Icons with ChordMap Logo
         run: npx tsx src/utils/setup-logos.ts
 
-      - name: Download clean gradle-wrapper.jar
-        run: curl -L https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar -o android/gradle/wrapper/gradle-wrapper.jar
+      - name: Restore Gradle Wrapper Jar
+        working-directory: android
+        run: |
+          echo "Downloading standard gradle-wrapper.jar to ensure it is not corrupt..."
+          mkdir -p gradle/wrapper
+          curl -L -f -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: wrapper
-          build-root-directory: android
-
-      - name: Build Debug APK
+      - name: Run Build and Compile APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Archive APK artifact
+      - name: Rename APK for Artifact Export
+        run: |
+          if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/ChordMap-Debug.apk
+          else
+            echo "app-debug.apk not found in default location, searching..."
+            find android/app/build/outputs/ -name "*.apk"
+          fi
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: ChordMap-Debug-APK
-          path: android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: warn
+          path: android/app/build/outputs/apk/debug/ChordMap-Debug.apk
 
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
@@ -95,6 +101,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/debug/ChordMap-Debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
