@@ -1,6 +1,6 @@
 {
-  "name": "ChordMap",
-  "description": "Editor interactivo de acordes y tablaturas con sincronización bidireccional en la nube.",
+  "name": "Chordmap Pro",
+  "description": "Editor interactivo de acordes y tablaturas de guitarra con sincronización automática en la nube (Google Sheets).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

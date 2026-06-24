@@ -1,22 +1,17 @@
-export interface SongEntity {
+export interface Song {
   id: number;
   title: string;
   artist: string;
   capo: number;
   tuning: string;
-  sectionsJson: string; // stringified list of Section
+  sectionsJson: string; // Serialized Section[]
   updatedDate: number;
 }
 
 export interface Section {
   name: string;
   type: 'chords' | 'tab';
-  content: string; // JSON holding ChordLine[] or TabData
-}
-
-export interface ChordItem {
-  name: string;
-  beats: number;
+  content: string; // Serialized ChordLine[] or TabContent
 }
 
 export interface ChordLine {
@@ -24,8 +19,13 @@ export interface ChordLine {
   repeat: number;
 }
 
-export interface TabData {
-  tab: string[][]; // 6 strings (e, B, G, D, A, E) x N columns
+export interface ChordItem {
+  name: string;
+  beats: number;
+}
+
+export interface TabContent {
+  tab: string[][]; // 6 rows (strings) x N columns
   repeat: number;
-  chords: string[]; // Chords belonging to each column
+  chords: string[]; // chord labels corresponding to each column
 }

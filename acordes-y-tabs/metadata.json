@@ -1,6 +1,0 @@
-{
-  "name": "Acordes y Tabs",
-  "description": "Bloc de notas elegante y minimalista para guardar acordes y tablaturas de canciones, sincronizado con Google Excel.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
