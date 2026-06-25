@@ -6,6 +6,8 @@ import {
 import { Song, Section } from '../types';
 import { ChordSectionEditor } from './ChordSectionEditor';
 import { TabSectionEditor } from './TabSectionEditor';
+import { extractSongChords, loadCustomChords, saveCustomChords, ChordShape } from '../utils/chordShapes';
+import { ChordDiagramPopup } from './ChordDiagramPopup';
 
 interface SongEditorProps {
   song: Song;
@@ -40,6 +42,28 @@ export const SongEditor: React.FC<SongEditorProps> = ({
   const [selectedPresetName, setSelectedPresetName] = React.useState("");
   const [customSectionName, setCustomSectionName] = React.useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [selectedChordForDiagram, setSelectedChordForDiagram] = React.useState<string | null>(null);
+
+  const songChords = React.useMemo(() => {
+    return extractSongChords(song.sectionsJson);
+  }, [song.sectionsJson]);
+
+  const customChords = React.useMemo(() => {
+    return loadCustomChords(song.sectionsJson);
+  }, [song.sectionsJson]);
+
+  const handleSaveCustomChord = (chordName: string, shape: ChordShape) => {
+    const updatedCustom = { ...customChords, [chordName]: shape };
+    const updatedSectionsJson = saveCustomChords(song.sectionsJson, updatedCustom);
+    onUpdateSong({ sectionsJson: updatedSectionsJson });
+  };
+
+  const handleDeleteCustomChord = (chordName: string) => {
+    const updatedCustom = { ...customChords };
+    delete updatedCustom[chordName];
+    const updatedSectionsJson = saveCustomChords(song.sectionsJson, updatedCustom);
+    onUpdateSong({ sectionsJson: updatedSectionsJson });
+  };
 
   const getSections = (): Section[] => {
     try {
@@ -233,6 +257,50 @@ export const SongEditor: React.FC<SongEditorProps> = ({
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Unique Chords Overview Bar */}
+      <div className="bg-white border-4 border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black select-none">
+        <div className="flex items-center justify-between border-b-2 border-black pb-2">
+          <h4 className="font-sans font-black text-xs uppercase tracking-widest text-black flex items-center gap-1.5">
+            <Guitar className="w-4 h-4 text-black" />
+            <span>Acordes de la canción</span>
+            <span className="bg-black text-yellow-300 text-[10px] font-black px-1.5 py-0.2 rounded-full leading-none">
+              {songChords.length}
+            </span>
+          </h4>
+          <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">
+            Toca para ver forma
+          </span>
+        </div>
+
+        {songChords.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {songChords.map(chord => {
+              const isCustom = !!customChords[chord];
+              return (
+                <button
+                  key={chord}
+                  onClick={() => setSelectedChordForDiagram(chord)}
+                  className={`px-2.5 py-1.5 border-2 border-black font-serif text-xs font-black rounded-sm cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none flex items-center gap-1 ${
+                    isCustom
+                      ? "bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                      : "bg-zinc-50 hover:bg-zinc-100 text-zinc-800 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                  }`}
+                >
+                  <span>{chord}</span>
+                  {isCustom && (
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" title="Forma personalizada" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-[10px] text-zinc-400 font-bold italic py-1 text-center">
+            Aún no hay acordes en esta canción. Añade acordes en las secciones de abajo.
+          </p>
+        )}
       </div>
 
       {/* Sections rendering */}
@@ -479,6 +547,20 @@ export const SongEditor: React.FC<SongEditorProps> = ({
           </div>
         </div>
       )}
+
+      {/* Interactive Chord Diagram & Edit Popup */}
+      {selectedChordForDiagram && (
+        <ChordDiagramPopup
+          chordName={selectedChordForDiagram}
+          allChords={songChords.length > 0 ? songChords : [selectedChordForDiagram]}
+          customChords={customChords}
+          capo={song.capo ?? 0}
+          onClose={() => setSelectedChordForDiagram(null)}
+          onSaveCustomChord={handleSaveCustomChord}
+          onDeleteCustomChord={handleDeleteCustomChord}
+        />
+      )}
     </div>
   );
 };
+
