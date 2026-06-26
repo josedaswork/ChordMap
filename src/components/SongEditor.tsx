@@ -67,16 +67,32 @@ export const SongEditor: React.FC<SongEditorProps> = ({
 
   const getSections = (): Section[] => {
     try {
-      return song.sectionsJson ? JSON.parse(song.sectionsJson) : [];
+      const all = song.sectionsJson ? JSON.parse(song.sectionsJson) : [];
+      if (!Array.isArray(all)) return [];
+      // Filter out any metadata section like 'custom_chords' from the user-visible list
+      return all.filter((s: any) => s && (s.type === 'chords' || s.type === 'tab')) as Section[];
     } catch {
       return [];
     }
   };
 
-  const updateSections = (sections: Section[]) => {
-    onUpdateSong({
-      sectionsJson: JSON.stringify(sections)
-    });
+  const updateSections = (visibleSections: Section[]) => {
+    try {
+      const all = song.sectionsJson ? JSON.parse(song.sectionsJson) : [];
+      // Keep other non-visible sections (like metadata custom_chords) untouched
+      const metadataSections = Array.isArray(all) 
+        ? all.filter((s: any) => s && s.type !== 'chords' && s.type !== 'tab') 
+        : [];
+      
+      const newAll = [...visibleSections, ...metadataSections];
+      onUpdateSong({
+        sectionsJson: JSON.stringify(newAll)
+      });
+    } catch {
+      onUpdateSong({
+        sectionsJson: JSON.stringify(visibleSections)
+      });
+    }
   };
 
   const handleUpdateSongField = (fields: Partial<Song>) => {
