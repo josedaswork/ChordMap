@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
   ArrowLeft, Loader2, Trash2, ChevronUp, ChevronDown, 
-  Copy, AlertTriangle, Plus, FileText, Music, Guitar 
+  Copy, AlertTriangle, Plus, FileText, Music, Guitar,
+  Play, Pause
 } from 'lucide-react';
 import { Song, Section } from '../types';
 import { ChordSectionEditor } from './ChordSectionEditor';
@@ -43,6 +44,68 @@ export const SongEditor: React.FC<SongEditorProps> = ({
   const [customSectionName, setCustomSectionName] = React.useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [selectedChordForDiagram, setSelectedChordForDiagram] = React.useState<string | null>(null);
+
+  // New states for Lyrics & Autoscroll
+  const [showLyricsPanel, setShowLyricsPanel] = React.useState(false);
+  const [isEditingLyrics, setIsEditingLyrics] = React.useState(false);
+  const [isScrolling, setIsScrolling] = React.useState(false);
+  const lyricsContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Autoscrolling logic
+  React.useEffect(() => {
+    if (!isScrolling) return;
+
+    const activeEl = lyricsContainerRef.current;
+    if (!activeEl) {
+      setIsScrolling(false);
+      return;
+    }
+
+    let lastTime = performance.now();
+    let accumulatedScroll = activeEl.scrollTop;
+    let animationFrameId: number;
+
+    const scrollStep = (time: number) => {
+      const el = lyricsContainerRef.current;
+      if (!el) {
+        setIsScrolling(false);
+        return;
+      }
+
+      const delta = time - lastTime;
+      lastTime = time;
+
+      const speed = song.scrollSpeed || 3;
+      // speed ranges 1 to 15. mapping: speed * 0.015 px/ms
+      const pixelsToScroll = speed * 0.015 * delta;
+
+      // If user scrolled manually, sync our accumulated position
+      const currentScrollTop = el.scrollTop;
+      if (Math.abs(currentScrollTop - accumulatedScroll) > 10) {
+        accumulatedScroll = currentScrollTop;
+      }
+
+      accumulatedScroll += pixelsToScroll;
+      el.scrollTop = Math.round(accumulatedScroll);
+
+      // Check if we hit the bottom of the active scroll container
+      // Add a small buffer (5px) to ensure reliability
+      const reachedBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
+      
+      if (reachedBottom) {
+        setIsScrolling(false);
+        return;
+      }
+
+      animationFrameId = requestAnimationFrame(scrollStep);
+    };
+
+    animationFrameId = requestAnimationFrame(scrollStep);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isScrolling, song.scrollSpeed]);
 
   const songChords = React.useMemo(() => {
     return extractSongChords(song.sectionsJson);
@@ -215,21 +278,48 @@ export const SongEditor: React.FC<SongEditorProps> = ({
 
       {/* Song Header Meta Card */}
       <div className="bg-white border-4 border-black p-4 sm:p-5 space-y-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black select-text">
-        <div className="flex flex-col gap-1">
-          <input
-            type="text"
-            value={song.title || ""}
-            onChange={e => handleUpdateSongField({ title: e.target.value })}
-            placeholder="Título de la Canción..."
-            className="w-full text-lg sm:text-xl font-serif font-black border-none focus:outline-none placeholder:text-zinc-300 bg-transparent text-black"
-          />
-          <input
-            type="text"
-            value={song.artist || ""}
-            onChange={e => handleUpdateSongField({ artist: e.target.value })}
-            placeholder="Artista / Grupo..."
-            className="w-full text-xs sm:text-sm font-black uppercase tracking-wider border-none focus:outline-none placeholder:text-zinc-300 bg-transparent text-zinc-500"
-          />
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 flex flex-col gap-1">
+            <input
+              type="text"
+              value={song.title || ""}
+              onChange={e => handleUpdateSongField({ title: e.target.value })}
+              placeholder="Título de la Canción..."
+              className="w-full text-lg sm:text-xl font-serif font-black border-none focus:outline-none placeholder:text-zinc-300 bg-transparent text-black"
+            />
+            <input
+              type="text"
+              value={song.artist || ""}
+              onChange={e => handleUpdateSongField({ artist: e.target.value })}
+              placeholder="Artista / Grupo..."
+              className="w-full text-xs sm:text-sm font-black uppercase tracking-wider border-none focus:outline-none placeholder:text-zinc-300 bg-transparent text-zinc-500"
+            />
+          </div>
+
+          {/* Letra & Scroll Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowLyricsPanel(prev => {
+                if (prev) {
+                  setIsScrolling(false);
+                }
+                return !prev;
+              });
+              // default reading mode when opening if lyrics already exist
+              if (!showLyricsPanel) {
+                setIsEditingLyrics(!song.lyrics);
+              }
+            }}
+            className={`px-3 py-2 border-2 border-black font-black text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] select-none shrink-0 ${
+              showLyricsPanel ? 'bg-yellow-350 text-black' : 'bg-white hover:bg-zinc-150 text-black'
+            }`}
+            title="Letra y Autoscroll de la canción"
+          >
+            <FileText className="w-4 h-4 shrink-0 text-black" />
+            <span className="hidden xs:inline">Letra & Scroll</span>
+            <span className="inline xs:hidden">Letra</span>
+          </button>
         </div>
 
         <div className="h-0.5 bg-black" />
@@ -274,6 +364,119 @@ export const SongEditor: React.FC<SongEditorProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Expandable Lyrics and Auto-scroll Panel */}
+      {showLyricsPanel && (
+        <div className="bg-white border-4 border-black p-4 space-y-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black select-none animate-fade-in">
+          {/* Panel Header */}
+          <div className="flex justify-between items-center border-b-2 border-black pb-2">
+            <h4 className="font-sans font-black text-xs uppercase tracking-widest text-black flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-black" />
+              <span>Letra y Autoscroll</span>
+            </h4>
+            
+            {/* Toggle Read/Edit */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingLyrics(prev => !prev);
+                setIsScrolling(false);
+              }}
+              className="px-2.5 py-1.5 border-2 border-black bg-zinc-50 hover:bg-zinc-150 text-[10px] font-black uppercase cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all text-black"
+            >
+              {isEditingLyrics ? "Ver Letra" : "Editar Letra"}
+            </button>
+          </div>
+
+          {/* Body content */}
+          {isEditingLyrics ? (
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase text-zinc-500">Introduce la letra de la canción:</span>
+              <textarea
+                value={song.lyrics || ""}
+                onChange={e => handleUpdateSongField({ lyrics: e.target.value })}
+                placeholder="Escribe o pega aquí la letra de la canción..."
+                className="w-full h-40 p-2.5 font-sans text-xs border-2 border-black bg-white focus:outline-none placeholder:text-zinc-300 text-black leading-relaxed"
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div ref={lyricsContainerRef} className="bg-yellow-50/50 border-2 border-black p-3.5 max-h-60 overflow-y-auto rounded-sm">
+                {song.lyrics ? (
+                  <p className="font-serif text-xs sm:text-sm text-zinc-800 whitespace-pre-wrap leading-relaxed select-text">
+                    {song.lyrics}
+                  </p>
+                ) : (
+                  <div className="text-center py-4 space-y-2">
+                    <p className="text-[11px] text-zinc-400 font-bold italic">
+                      No hay letras guardadas para esta canción.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingLyrics(true)}
+                      className="px-2.5 py-1 text-[10px] font-black uppercase border border-black bg-white hover:bg-zinc-100 text-black cursor-pointer"
+                    >
+                      Añadir Letra
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Scroll Control Bar */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t-2 border-black pt-3.5 bg-zinc-50 -mx-4 -mb-4 p-4">
+            {/* Auto-scroll Play/Pause button */}
+            <button
+              type="button"
+              onClick={() => setIsScrolling(prev => !prev)}
+              className={`w-full sm:w-auto px-4 py-2 border-2 border-black font-black text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${
+                isScrolling 
+                  ? 'bg-red-500 hover:bg-red-600 text-white shadow-none animate-pulse' 
+                  : 'bg-green-500 hover:bg-green-600 text-white'
+              }`}
+            >
+              {isScrolling ? (
+                <>
+                  <Pause className="w-4 h-4 text-white fill-white shrink-0" />
+                  <span>Pausar Scroll</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 text-white fill-white shrink-0" />
+                  <span>Autoscroll</span>
+                </>
+              )}
+            </button>
+
+            {/* Scroll Speed Controls */}
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">
+              <span className="text-[10px] font-black uppercase text-zinc-700">Velocidad de Scroll:</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={(song.scrollSpeed || 3) <= 1}
+                  onClick={() => handleUpdateSongField({ scrollSpeed: Math.max(1, (song.scrollSpeed || 3) - 1) })}
+                  className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 disabled:opacity-40 font-black cursor-pointer text-black"
+                >
+                  -
+                </button>
+                <span className="font-mono text-xs font-black text-black bg-white px-3 py-1 border-2 border-black min-w-[2.5rem] text-center">
+                  {song.scrollSpeed || 3}
+                </span>
+                <button
+                  type="button"
+                  disabled={(song.scrollSpeed || 3) >= 15}
+                  onClick={() => handleUpdateSongField({ scrollSpeed: Math.min(15, (song.scrollSpeed || 3) + 1) })}
+                  className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 disabled:opacity-40 font-black cursor-pointer text-black"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Unique Chords Overview Bar */}
       <div className="bg-white border-4 border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black select-none">

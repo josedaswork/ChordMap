@@ -5,6 +5,8 @@ export interface Song {
   capo: number;
   tuning: string;
   sectionsJson: string; // Serialized Section[]
+  lyrics?: string;
+  scrollSpeed?: number;
   updatedDate: number;
 }
 

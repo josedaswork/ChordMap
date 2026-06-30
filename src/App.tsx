@@ -241,7 +241,9 @@ export default function App() {
           title: s.title,
           artist: s.artist,
           sectionsJson: s.sectionsJson,
-          updatedDate: s.updatedDate
+          updatedDate: s.updatedDate,
+          lyrics: s.lyrics || "",
+          scrollSpeed: s.scrollSpeed || 0
         })) : []
       };
 
@@ -278,6 +280,8 @@ export default function App() {
               mergedSongs[matchIndex] = {
                 ...mergedSongs[matchIndex],
                 sectionsJson: cSong.sectionsJson || "[]",
+                lyrics: cSong.lyrics || "",
+                scrollSpeed: cSong.scrollSpeed !== undefined ? Number(cSong.scrollSpeed) : 0,
                 updatedDate: Number(cSong.updatedDate) || Date.now()
               };
             }
@@ -289,6 +293,8 @@ export default function App() {
               capo: 0,
               tuning: "Estándar",
               sectionsJson: cSong.sectionsJson || "[]",
+              lyrics: cSong.lyrics || "",
+              scrollSpeed: cSong.scrollSpeed !== undefined ? Number(cSong.scrollSpeed) : 0,
               updatedDate: Number(cSong.updatedDate) || Date.now()
             });
           }
