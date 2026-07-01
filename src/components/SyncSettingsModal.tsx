@@ -193,13 +193,68 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
     
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     
+    // Auto-migrate or initialize sheet to 8-column structure (including Capo and Tuning)
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Título", "Artista", "Secciones JSON", "Fecha de Sincronización"]);
-      sheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#FFFBEB");
+      sheet.appendRow(["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización"]);
+      sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#FFFBEB");
+    } else if (sheet.getLastColumn() > 0 && sheet.getLastColumn() < 8) {
+      // Migrate old sheet structures (4-column or 6-column) to 8-column sheet
+      var lastRow = sheet.getLastRow();
+      var lastCol = sheet.getLastColumn();
+      
+      // 1. Get existing data
+      var oldData = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
+      
+      // 2. Clear old columns
+      sheet.getRange(1, 1, lastRow, lastCol).clearContent();
+      
+      // 3. Set new headers
+      sheet.getRange(1, 1, 1, 8).setValues([["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización"]]);
+      sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#FFFBEB");
+      
+      // 4. Re-insert migrated data
+      if (oldData.length > 0) {
+        var migratedData = [];
+        for (var m = 0; m < oldData.length; m++) {
+          var title = oldData[m][0];
+          var artist = oldData[m][1];
+          var sectionsJson = oldData[m][2];
+          var lyrics = "";
+          var scrollSpeed = 0;
+          var capo = 0;
+          var tuning = "Estándar";
+          var updatedDate = 0;
+          
+          if (lastCol === 4) {
+            // Old 4-column structure
+            updatedDate = oldData[m][3];
+          } else if (lastCol === 6) {
+            // Old 6-column structure
+            lyrics = oldData[m][3] || "";
+            scrollSpeed = oldData[m][4] !== undefined ? Number(oldData[m][4]) : 0;
+            updatedDate = oldData[m][5];
+          } else {
+            // Fallback
+            updatedDate = oldData[m][oldData[m].length - 1];
+          }
+          
+          migratedData.push([
+            title,
+            artist,
+            sectionsJson,
+            lyrics,
+            scrollSpeed,
+            capo,
+            tuning,
+            updatedDate
+          ]);
+        }
+        sheet.getRange(2, 1, migratedData.length, 8).setValues(migratedData);
+      }
     }
     
     var numRows = sheet.getLastRow();
-    var dataRange = numRows > 1 ? sheet.getRange(2, 1, numRows - 1, 4).getValues() : [];
+    var dataRange = numRows > 1 ? sheet.getRange(2, 1, numRows - 1, 8).getValues() : [];
     
     var songRowMap = {};
     for (var i = 0; i < dataRange.length; i++) {
@@ -215,24 +270,41 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
       var existingRow = songRowMap[key];
       
       if (existingRow) {
-        var sheetUpdatedTime = sheet.getRange(existingRow, 4).getValue();
+        var sheetUpdatedTime = sheet.getRange(existingRow, 8).getValue();
         if (Number(valSong.updatedDate) > Number(sheetUpdatedTime)) {
           sheet.getRange(existingRow, 3).setValue(valSong.sectionsJson);
-          sheet.getRange(existingRow, 4).setValue(valSong.updatedDate);
+          sheet.getRange(existingRow, 4).setValue(valSong.lyrics || "");
+          sheet.getRange(existingRow, 5).setValue(valSong.scrollSpeed || 0);
+          sheet.getRange(existingRow, 6).setValue(valSong.capo || 0);
+          sheet.getRange(existingRow, 7).setValue(valSong.tuning || "Estándar");
+          sheet.getRange(existingRow, 8).setValue(valSong.updatedDate);
         }
       } else {
-        sheet.appendRow([valSong.title, valSong.artist, valSong.sectionsJson, valSong.updatedDate]);
+        sheet.appendRow([
+          valSong.title, 
+          valSong.artist, 
+          valSong.sectionsJson, 
+          valSong.lyrics || "", 
+          valSong.scrollSpeed || 0, 
+          valSong.capo || 0,
+          valSong.tuning || "Estándar",
+          valSong.updatedDate
+        ]);
       }
     }
     
-    var finalDataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+    var finalDataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
     var resultSongs = [];
     for (var k = 0; k < finalDataRange.length; k++) {
       resultSongs.push({
         title: finalDataRange[k][0],
         artist: finalDataRange[k][1],
         sectionsJson: finalDataRange[k][2],
-        updatedDate: Number(finalDataRange[k][3])
+        lyrics: finalDataRange[k][3] || "",
+        scrollSpeed: finalDataRange[k][4] !== undefined ? Number(finalDataRange[k][4]) : 0,
+        capo: finalDataRange[k][5] !== undefined ? Number(finalDataRange[k][5]) : 0,
+        tuning: finalDataRange[k][6] || "Estándar",
+        updatedDate: Number(finalDataRange[k][7])
       });
     }
     

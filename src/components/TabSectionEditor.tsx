@@ -53,6 +53,7 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
   const chords = Array.isArray(tabData.chords) && tabData.chords.length === colCount ? tabData.chords : Array(colCount).fill("");
 
   const [selectedCell, setSelectedCell] = React.useState<{ s: number; c: number } | null>(null);
+  const [isEditing, setIsEditing] = React.useState(false);
 
   const [isImporting, setIsImporting] = React.useState(false);
   const [importText, setImportText] = React.useState("");
@@ -359,10 +360,28 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
       </div>
 
       {/* Zoom / Font Size Toolbar */}
-      <div className="flex items-center justify-between bg-zinc-100 border-2 border-black p-2 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-xs font-black uppercase text-black select-none">
-        <span className="flex items-center gap-1.5">
-          <span className="text-[10px] tracking-wider text-zinc-600 font-sans">Visualización de la Tablatura</span>
-        </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-zinc-100 border-2 border-black p-2 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-xs font-black uppercase text-black select-none gap-2">
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] tracking-wider text-zinc-600 font-sans font-black">Visualización</span>
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditing(prev => {
+                if (prev) {
+                  setSelectedCell(null);
+                }
+                return !prev;
+              });
+            }}
+            className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase cursor-pointer transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1 ${
+              isEditing ? "bg-yellow-350 text-black font-black" : "bg-white text-zinc-600 hover:text-black hover:bg-zinc-50"
+            }`}
+          >
+            <span className="text-xs">{isEditing ? "✓" : "✎"}</span>
+            <span>{isEditing ? "Modo Edición" : "Editar Tablatura"}</span>
+          </button>
+        </div>
+        
         <div className="flex items-center gap-2">
           <span className="text-[9px] text-zinc-500 font-black font-sans">Escala:</span>
           <button
@@ -391,95 +410,104 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
       <div className="bg-white border-2 border-black p-2 overflow-x-auto shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
         <div className="min-w-max flex flex-col font-mono text-sm leading-tight">
           
-          {/* Column deletion row */}
-          <div className="flex items-center" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
-            <span className="w-8 text-[9px] font-black uppercase text-red-500 text-right pr-2 select-none shrink-0">
-              Elim.
-            </span>
-            <span className="shrink-0 w-2 text-zinc-300"> </span>
-            <div className="flex gap-1">
-              {chords.map((_, cIdx) => (
-                <button
-                  key={cIdx}
-                  type="button"
-                  title={`Eliminar columna #${cIdx + 1}`}
-                  onClick={() => handleDeleteColumn(cIdx)}
-                  className="flex items-center justify-center bg-red-50 hover:bg-red-200 border border-red-300 hover:border-red-600 text-red-600 rounded cursor-pointer transition-colors"
-                  style={{
-                    width: `${Math.round(tabFontSize * 2.2)}px`,
-                    height: `${Math.round(tabFontSize * 1.5)}px`
-                  }}
-                >
-                  <Trash2 className="w-2.5 h-2.5" />
-                </button>
-              ))}
-            </div>
-            <span className="shrink-0 w-2 text-zinc-300"> </span>
-          </div>
+          {isEditing && (
+            <>
+              {/* Column deletion row */}
+              <div className="flex items-center animate-fade-in" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
+                <span className="w-8 text-[9px] font-black uppercase text-red-500 text-right pr-2 select-none shrink-0">
+                  Elim.
+                </span>
+                <span className="shrink-0 w-2 text-zinc-300"> </span>
+                <div className="flex gap-0.5">
+                  {chords.map((_, cIdx) => (
+                    <button
+                      key={cIdx}
+                      type="button"
+                      title={`Eliminar columna #${cIdx + 1}`}
+                      onClick={() => handleDeleteColumn(cIdx)}
+                      className="flex items-center justify-center bg-red-50 hover:bg-red-200 border border-red-300 hover:border-red-600 text-red-600 rounded cursor-pointer transition-colors"
+                      style={{
+                        width: `${Math.round(tabFontSize * 1.7)}px`,
+                        height: `${Math.round(tabFontSize * 1.5)}px`
+                      }}
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  ))}
+                </div>
+                <span className="shrink-0 w-2 text-zinc-300"> </span>
+              </div>
 
-          {/* Column insertion row */}
-          <div className="flex items-center mt-1" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
-            <span className="w-8 text-[9px] font-black uppercase text-emerald-500 text-right pr-2 select-none shrink-0">
-              Ins.
-            </span>
-            <span className="shrink-0 w-2 text-zinc-300"> </span>
-            <div className="flex gap-1">
-              {chords.map((_, cIdx) => (
-                <button
-                  key={cIdx}
-                  type="button"
-                  title={`Insertar columna vacía antes de la #${cIdx + 1}`}
-                  onClick={() => handleInsertColumn(cIdx)}
-                  className="flex items-center justify-center bg-emerald-50 hover:bg-emerald-200 border border-emerald-300 hover:border-emerald-600 text-emerald-600 rounded cursor-pointer transition-colors"
-                  style={{
-                    width: `${Math.round(tabFontSize * 2.2)}px`,
-                    height: `${Math.round(tabFontSize * 1.5)}px`
-                  }}
-                >
-                  <Plus className="w-2.5 h-2.5" />
-                </button>
-              ))}
-            </div>
-            <span className="shrink-0 w-2 text-zinc-300"> </span>
-          </div>
+              {/* Column insertion row */}
+              <div className="flex items-center mt-1 animate-fade-in" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
+                <span className="w-8 text-[9px] font-black uppercase text-emerald-500 text-right pr-2 select-none shrink-0">
+                  Ins.
+                </span>
+                <span className="shrink-0 w-2 text-zinc-300"> </span>
+                <div className="flex gap-0.5">
+                  {chords.map((_, cIdx) => (
+                    <button
+                      key={cIdx}
+                      type="button"
+                      title={`Insertar columna vacía antes de la #${cIdx + 1}`}
+                      onClick={() => handleInsertColumn(cIdx)}
+                      className="flex items-center justify-center bg-emerald-50 hover:bg-emerald-200 border border-emerald-300 hover:border-emerald-600 text-emerald-600 rounded cursor-pointer transition-colors"
+                      style={{
+                        width: `${Math.round(tabFontSize * 1.7)}px`,
+                        height: `${Math.round(tabFontSize * 1.5)}px`
+                      }}
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                    </button>
+                  ))}
+                </div>
+                <span className="shrink-0 w-2 text-zinc-300"> </span>
+              </div>
 
-          <div className="h-px bg-zinc-200 my-1.5" />
+              <div className="h-px bg-zinc-200 my-1.5" />
+            </>
+          )}
 
           {/* Chord labels line */}
-          <div className="flex items-center" style={{ height: `${Math.round(tabFontSize * 2.8)}px` }}>
-            <span className="w-8 text-[10px] font-black uppercase text-amber-600 text-right pr-2 select-none shrink-0" style={{ fontSize: `${Math.max(8, tabFontSize - 3)}px` }}>
-              Aco.
-            </span>
-            <span className="shrink-0 w-2 text-zinc-300"> </span>
-            <div className="flex gap-1 flex-row">
-              {chords.map((chord, cIdx) => {
-                const isSel = selectedCell && selectedCell.s === -1 && selectedCell.c === cIdx;
-                return (
-                  <div
-                    key={cIdx}
-                    onClick={() => handleSelectCell(-1, cIdx)}
-                    className={`flex items-center justify-center font-serif font-black border cursor-pointer rounded transition-all ${
-                      isSel 
-                        ? "border-black bg-amber-200 text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]" 
-                        : chord 
-                        ? "border-amber-400 bg-amber-50 text-amber-700" 
-                        : "border-zinc-150 hover:border-black text-zinc-350"
-                    }`}
-                    style={{
-                      width: `${Math.round(tabFontSize * 2.2)}px`,
-                      height: `${Math.round(tabFontSize * 2.2)}px`,
-                      fontSize: `${Math.max(8, tabFontSize - 1)}px`
-                    }}
-                  >
-                    {chord || "·"}
-                  </div>
-                );
-              })}
-            </div>
-            <span className="shrink-0 w-2 text-zinc-300"> </span>
-          </div>
-
-          <div className="h-px bg-zinc-200 my-1.5" />
+          {(isEditing || chords.some(c => c && c.trim() !== "")) && (
+            <>
+              <div className="flex items-center" style={{ height: `${Math.round(tabFontSize * 2.8)}px` }}>
+                <span className="w-8 text-[10px] font-black uppercase text-amber-600 text-right pr-2 select-none shrink-0" style={{ fontSize: `${Math.max(8, tabFontSize - 3)}px` }}>
+                  Aco.
+                </span>
+                <span className="shrink-0 w-2 text-zinc-300"> </span>
+                <div className="flex gap-0.5 flex-row">
+                  {chords.map((chord, cIdx) => {
+                    const isSel = selectedCell && selectedCell.s === -1 && selectedCell.c === cIdx;
+                    return (
+                      <div
+                        key={cIdx}
+                        onClick={() => isEditing && handleSelectCell(-1, cIdx)}
+                        className={`flex items-center justify-center font-serif font-black border rounded transition-all ${
+                          isEditing && isSel 
+                            ? "border-black bg-amber-200 text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]" 
+                            : chord 
+                            ? "border-amber-400 bg-amber-50 text-amber-700 font-bold" 
+                            : isEditing 
+                            ? "border-zinc-150 hover:border-black text-zinc-350 cursor-pointer"
+                            : "border-transparent text-zinc-200"
+                        }`}
+                        style={{
+                          width: `${Math.round(tabFontSize * 1.7)}px`,
+                          height: `${Math.round(tabFontSize * 2.2)}px`,
+                          fontSize: `${Math.max(8, tabFontSize - 1)}px`
+                        }}
+                      >
+                        {chord || (isEditing ? "·" : "")}
+                      </div>
+                    );
+                  })}
+                </div>
+                <span className="shrink-0 w-2 text-zinc-300"> </span>
+              </div>
+              <div className="h-px bg-zinc-200 my-1.5" />
+            </>
+          )}
 
           {/* Fretboard strings */}
           {STRINGS.map((str, sIdx) => {
@@ -492,23 +520,25 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                 <span className="shrink-0 text-zinc-400 w-2 text-center font-light select-none" style={{ fontSize: `${tabFontSize}px` }}>
                   |
                 </span>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-0.5 shrink-0">
                   {stringRow.map((cell, cIdx) => {
                     const isSel = selectedCell && selectedCell.s === sIdx && selectedCell.c === cIdx;
                     const hasNote = cell !== "-";
                     return (
                       <div
                         key={cIdx}
-                        onClick={() => handleSelectCell(sIdx, cIdx)}
-                        className={`flex items-center justify-center font-black cursor-pointer border rounded transition-all ${
-                          isSel 
+                        onClick={() => isEditing && handleSelectCell(sIdx, cIdx)}
+                        className={`flex items-center justify-center font-black border rounded transition-all ${
+                          isEditing && isSel 
                             ? "bg-black text-yellow-300 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]" 
                             : hasNote 
                             ? "bg-zinc-100 text-black border-black font-bold" 
-                            : "bg-transparent text-zinc-300 border-transparent hover:border-zinc-300"
+                            : isEditing
+                            ? "bg-transparent text-zinc-300 border-transparent hover:border-zinc-300 cursor-pointer"
+                            : "bg-transparent text-zinc-350 border-transparent"
                         }`}
                         style={{
-                          width: `${Math.round(tabFontSize * 2.2)}px`,
+                          width: `${Math.round(tabFontSize * 1.7)}px`,
                           height: `${Math.round(tabFontSize * 2.2)}px`,
                           fontSize: `${Math.max(9, tabFontSize)}px`
                         }}
@@ -640,56 +670,60 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
           )}
         </div>
       ) : (
-        <div className="text-center py-2 text-zinc-500 text-[11px] font-semibold">
-          💡 Toca cualquier celda de cuerda o acorde arriba para colocar trastes y notas.
-        </div>
+        isEditing && (
+          <div className="text-center py-2 text-zinc-500 text-[11px] font-semibold animate-fade-in">
+            💡 Toca cualquier celda de cuerda o acorde arriba para colocar trastes y notas.
+          </div>
+        )
       )}
 
       {/* Grid Width & Repeat Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t-2 border-zinc-200">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-black uppercase text-zinc-500">
-            Columnas:
-          </span>
-          <button
-            onClick={handleRemoveColumns}
-            disabled={colCount <= 8}
-            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-150 disabled:opacity-40 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[15px] text-black font-bold"
-          >
-            -8
-          </button>
-          <span className="font-mono text-xs font-black text-black bg-zinc-100 border border-black px-2 py-1">
-            {colCount} cols
-          </span>
-          <button
-            onClick={handleAddColumns}
-            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-150 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[15px] text-black font-bold"
-          >
-            +8
-          </button>
-        </div>
+      {isEditing && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t-2 border-zinc-200 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase text-zinc-500">
+              Columnas:
+            </span>
+            <button
+              onClick={handleRemoveColumns}
+              disabled={colCount <= 8}
+              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-150 disabled:opacity-40 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[15px] text-black font-bold"
+            >
+              -8
+            </button>
+            <span className="font-mono text-xs font-black text-black bg-zinc-100 border border-black px-2 py-1">
+              {colCount} cols
+            </span>
+            <button
+              onClick={handleAddColumns}
+              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-150 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[15px] text-black font-bold"
+            >
+              +8
+            </button>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-black uppercase text-zinc-500">
-            Repeticiones:
-          </span>
-          <button
-            onClick={() => pushToHistoryAndUpdate(columns, Math.max(1, repeats - 1), chords)}
-            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-bold text-sm text-black"
-          >
-            -
-          </button>
-          <span className="font-mono text-sm font-black w-8 text-center text-black">
-            {repeats}×
-          </span>
-          <button
-            onClick={() => pushToHistoryAndUpdate(columns, repeats + 1, chords)}
-            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-bold text-sm text-black"
-          >
-            +
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase text-zinc-500">
+              Repeticiones:
+            </span>
+            <button
+              onClick={() => pushToHistoryAndUpdate(columns, Math.max(1, repeats - 1), chords)}
+              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-bold text-sm text-black"
+            >
+              -
+            </button>
+            <span className="font-mono text-sm font-black w-8 text-center text-black">
+              {repeats}×
+            </span>
+            <button
+              onClick={() => pushToHistoryAndUpdate(columns, repeats + 1, chords)}
+              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-bold text-sm text-black"
+            >
+              +
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -243,7 +243,9 @@ export default function App() {
           sectionsJson: s.sectionsJson,
           updatedDate: s.updatedDate,
           lyrics: s.lyrics || "",
-          scrollSpeed: s.scrollSpeed || 0
+          scrollSpeed: s.scrollSpeed || 0,
+          capo: s.capo || 0,
+          tuning: s.tuning || "Estándar"
         })) : []
       };
 
@@ -282,6 +284,8 @@ export default function App() {
                 sectionsJson: cSong.sectionsJson || "[]",
                 lyrics: cSong.lyrics || "",
                 scrollSpeed: cSong.scrollSpeed !== undefined ? Number(cSong.scrollSpeed) : 0,
+                capo: cSong.capo !== undefined ? Number(cSong.capo) : 0,
+                tuning: cSong.tuning || "Estándar",
                 updatedDate: Number(cSong.updatedDate) || Date.now()
               };
             }
@@ -290,8 +294,8 @@ export default function App() {
               id: Number(cSong.updatedDate) || Date.now(),
               title: cSong.title || "",
               artist: cSong.artist || "",
-              capo: 0,
-              tuning: "Estándar",
+              capo: cSong.capo !== undefined ? Number(cSong.capo) : 0,
+              tuning: cSong.tuning || "Estándar",
               sectionsJson: cSong.sectionsJson || "[]",
               lyrics: cSong.lyrics || "",
               scrollSpeed: cSong.scrollSpeed !== undefined ? Number(cSong.scrollSpeed) : 0,
