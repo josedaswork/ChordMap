@@ -1,5 +1,9 @@
 import React from 'react';
-import { Music, CloudUpload, CloudDownload, Settings, Search, FileText, ChevronRight, Plus } from 'lucide-react';
+import { 
+  Music, CloudUpload, CloudDownload, Settings, Search, 
+  FileText, ChevronRight, Plus, Sparkles, X, Layers
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Song } from '../types';
 
 interface SongListProps {
@@ -41,191 +45,241 @@ export const SongList: React.FC<SongListProps> = ({
   };
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* Title & Sync Options */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="space-y-1">
-          <h2 className="text-xl sm:text-2xl font-black text-black tracking-tight uppercase flex items-center gap-1.5">
-            <Music className="w-6 h-6 stroke-[2.5] text-black" />
-            Mis Canciones
-          </h2>
-          <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
-            Editor interactivo de acordes y tablaturas
-          </p>
+    <div className="space-y-4 font-sans text-zinc-900">
+      
+      {/* Top Banner Card with Sync Actions */}
+      <div className="bg-zinc-50/90 border border-zinc-200/90 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
+              <span className="w-7 h-7 rounded-full bg-amber-400/20 text-amber-500 flex items-center justify-center">
+                <Music className="w-4 h-4 stroke-[2.5]" />
+              </span>
+              Mis Canciones
+            </h2>
+            <p className="text-[11px] text-zinc-500 font-medium">
+              Biblioteca musical y acordes
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-white text-zinc-700 border border-zinc-200 shadow-2xs">
+              {songs.length} {songs.length === 1 ? 'canción' : 'canciones'}
+            </span>
+          </div>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto justify-end">
-          <button
+
+        {/* Sync Buttons Row */}
+        <div className="flex items-center gap-2 pt-1">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
             onClick={() => onTriggerSync("upload")}
             disabled={syncStatus === "loading"}
-            title="Subir todos los cambios locales a la nube (Excel)"
-            className="flex-1 sm:flex-initial p-2.5 border-3 border-black bg-white hover:bg-zinc-100 disabled:opacity-50 text-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-1"
+            title="Subir todos los cambios locales a Google Sheets"
+            className="flex-1 py-2 px-3 rounded-2xl bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors shadow-2xs"
           >
-            <CloudUpload className={`w-4 h-4 stroke-[2.5] text-blue-600 ${syncStatus === "loading" ? "animate-bounce" : ""}`} />
-            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wide">
-              Subir Nube
-            </span>
-          </button>
-          
-          <button
+            <CloudUpload className={`w-4 h-4 text-blue-500 ${syncStatus === "loading" ? "animate-bounce" : ""}`} />
+            <span>Subir</span>
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
             onClick={() => onTriggerSync("download")}
             disabled={syncStatus === "loading"}
-            title="Bajar todas las canciones del Excel / Nube"
-            className="flex-1 sm:flex-initial p-2.5 border-3 border-black bg-white hover:bg-zinc-100 disabled:opacity-50 text-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-1"
+            title="Descargar canciones de Google Sheets"
+            className="flex-1 py-2 px-3 rounded-2xl bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors shadow-2xs"
           >
-            <CloudDownload className={`w-4 h-4 stroke-[2.5] text-green-600 ${syncStatus === "loading" ? "animate-bounce" : ""}`} />
-            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wide">
-              Bajar Nube
-            </span>
-          </button>
+            <CloudDownload className={`w-4 h-4 text-emerald-500 ${syncStatus === "loading" ? "animate-bounce" : ""}`} />
+            <span>Bajar</span>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.08, rotate: 30 }}
+            whileTap={{ scale: 0.90 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
             onClick={onOpenSyncSettings}
-            title="Configurar URL de Excel"
-            className="p-2.5 border-3 border-black bg-yellow-300 hover:bg-yellow-400 text-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center"
+            title="Configurar Google Sheets"
+            className="w-9 h-9 rounded-2xl bg-amber-400 hover:bg-amber-500 text-zinc-950 flex items-center justify-center cursor-pointer shadow-xs transition-colors shrink-0"
           >
-            <Settings className="w-4 h-4 stroke-[2.5]" />
-          </button>
+            <Settings className="w-4 h-4 stroke-[2.2]" />
+          </motion.button>
         </div>
       </div>
 
-      {/* Sync Message banner */}
-      {syncStatus !== "idle" && (
-        <div className={`p-3 border-2 border-black text-xs font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 ${syncStatus === "loading" ? "bg-zinc-100 text-zinc-850" : syncStatus === "success" ? "bg-green-100 text-green-800 border-green-800" : "bg-red-100 text-red-800 border-red-800"}`}>
-          <div className={`w-2.5 h-2.5 rounded-full shrink-0 border border-black ${syncStatus === "loading" ? "bg-zinc-500 animate-pulse" : syncStatus === "success" ? "bg-green-500" : "bg-red-500"}`} />
-          <p className="flex-1">{syncMessage}</p>
-        </div>
-      )}
+      {/* Sync Status Banner */}
+      <AnimatePresence>
+        {syncStatus !== "idle" && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className={`p-3 rounded-2xl text-xs font-semibold flex items-center gap-2 border shadow-xs ${
+              syncStatus === "loading" 
+                ? "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800/60" 
+                : syncStatus === "success" 
+                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800/60" 
+                : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800/60"
+            }`}
+          >
+            <div className={`w-2 h-2 rounded-full shrink-0 ${
+              syncStatus === "loading" ? "bg-amber-500 animate-pulse" : syncStatus === "success" ? "bg-emerald-500" : "bg-rose-500"
+            }`} />
+            <p className="flex-1 leading-snug">{syncMessage}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Search Input */}
-      {(songs.length > 0 || searchQuery) && (
-        <div className="relative border-3 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center bg-white">
-          <Search className="w-5 h-5 ml-3 absolute top-3 text-black stroke-[2.5]" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Buscar por título o artista..."
-            className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm font-bold border-none focus:outline-none placeholder:text-zinc-400 bg-white text-black"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="px-3 text-xs font-black uppercase text-zinc-400 hover:text-black shrink-0 cursor-pointer"
-            >
-              Borrar
-            </button>
-          )}
-        </div>
-      )}
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 stroke-[2.2] pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Buscar por título o artista..."
+          className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm font-medium rounded-full bg-white text-zinc-900 border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 placeholder:text-zinc-400 shadow-xs transition-all"
+        />
+        {searchQuery && (
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
+          >
+            <X className="w-3.5 h-3.5" />
+          </motion.button>
+        )}
+      </div>
 
-      {/* Empty State */}
+      {/* Empty State or Song List */}
       {filteredSongs.length === 0 ? (
-        <div className="border-4 border-dashed border-black bg-white p-8 md:p-12 text-center rounded-xl max-w-lg mx-auto space-y-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <Music className="w-12 h-12 mx-auto stroke-[1.8] text-zinc-400" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white border border-dashed border-zinc-300 p-8 text-center rounded-3xl space-y-4 shadow-xs"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-amber-400/10 text-amber-500 flex items-center justify-center mx-auto">
+            <Music className="w-7 h-7 stroke-[2]" />
+          </div>
           <div className="space-y-1">
-            <h3 className="font-black text-black uppercase tracking-wide text-sm md:text-base">
-              {searchQuery ? "Sin resultados para la búsqueda" : "Guarda tu primera canción"}
+            <h3 className="font-bold text-zinc-900 text-sm sm:text-base">
+              {searchQuery ? "Sin resultados" : "Tu repertorio está vacío"}
             </h3>
-            <p className="text-xs text-zinc-500 font-bold leading-relaxed">
+            <p className="text-xs text-zinc-500 leading-relaxed max-w-xs mx-auto">
               {searchQuery
-                ? "No se encontraron títulos o artistas con ese nombre. Intenta con palabras clave diferentes."
-                : "Toca el botón 'Añadir Canción' para escribir acordes, versos, puentes y tablaturas móviles."}
+                ? `No encontramos canciones con "${searchQuery}". Prueba con otras palabras clave.`
+                : "Agrega tu primera canción para componer progresiones de acordes y tablaturas de 6 cuerdas."}
             </p>
           </div>
-          <div className="pt-2">
+          <div className="pt-1">
             {searchQuery ? (
-              <button
+              <motion.button
+                whileTap={{ scale: 0.94 }}
                 onClick={() => setSearchQuery("")}
-                className="px-4 py-2 bg-black hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-wide cursor-pointer text-white"
+                className="px-4 py-2 bg-zinc-800 text-zinc-100 font-bold text-xs rounded-full cursor-pointer hover:bg-zinc-700 transition-colors"
               >
                 Limpiar búsqueda
-              </button>
+              </motion.button>
             ) : (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.94 }}
                 onClick={onAddSong}
-                className="px-4 py-2 bg-yellow-300 hover:bg-yellow-400 border-2 border-black text-black font-black text-xs uppercase tracking-wide cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-zinc-950 font-extrabold text-xs rounded-full shadow-md shadow-amber-500/20 cursor-pointer"
               >
-                + Añadir Canción
-              </button>
+                + Añadir Primera Canción
+              </motion.button>
             )}
           </div>
-        </div>
+        </motion.div>
       ) : (
-        /* Song Cards List */
-        <div className="space-y-3 pb-20">
-          <div className="flex gap-4 text-[10px] sm:text-xs">
-            <span className="font-black bg-black text-white px-2.5 py-1 border border-black uppercase tracking-wider">
-              Total: {songs.length} {songs.length === 1 ? 'canción' : 'canciones'}
-            </span>
-            <span className="font-bold border-2 border-black bg-zinc-50 px-2 py-1 text-zinc-600 uppercase tracking-widest">
-              Sincronizadas con Google Sheets
+        /* Song Cards List with Staggered Motion */
+        <div className="space-y-2.5 pb-20">
+          <div className="flex items-center justify-between px-1 text-[11px] text-zinc-400 font-semibold select-none">
+            <span>Repertorio ({filteredSongs.length})</span>
+            <span className="flex items-center gap-1 text-[10px] text-amber-500 font-bold">
+              <Sparkles className="w-3 h-3" />
+              Sincronizado
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3.5">
-            {filteredSongs.map(song => {
+          <div className="grid grid-cols-1 gap-2.5">
+            {filteredSongs.map((song, idx) => {
               const secCount = getSectionCount(song.sectionsJson);
               return (
-                <div
+                <motion.div
                   key={song.id}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(idx * 0.03, 0.3), type: "spring", stiffness: 400, damping: 28 }}
+                  whileHover={{ scale: 1.01, y: -1 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => onSelectSong(song.id)}
-                  className="bg-white border-3 border-black p-4 flex justify-between items-center cursor-pointer hover:bg-zinc-50 transition-colors shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] group"
+                  className="bg-white border border-zinc-200/90 hover:border-amber-400/80 p-3.5 sm:p-4 rounded-3xl flex items-center justify-between cursor-pointer shadow-xs hover:shadow-sm transition-all group select-none"
                 >
-                  <div className="space-y-2 flex-1 pr-4">
+                  <div className="space-y-1.5 flex-1 pr-3">
                     <div className="space-y-0.5">
-                      <h4 className="font-serif text-sm sm:text-base font-black text-black leading-tight group-hover:underline">
+                      <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 group-hover:text-amber-600 transition-colors leading-tight">
                         {song.title || "Sin título"}
                       </h4>
                       {song.artist && (
-                        <p className="text-xs font-black text-zinc-500 uppercase tracking-wider">
-                          Por: {song.artist}
+                        <p className="text-xs font-semibold text-zinc-500">
+                          {song.artist}
                         </p>
                       )}
                     </div>
                     
+                    {/* Tags */}
                     <div className="flex flex-wrap items-center gap-1.5">
                       {(song.capo ?? 0) > 0 && (
-                        <span className="bg-yellow-200 border-2 border-black font-mono text-[9px] font-black uppercase text-black px-1.5 py-0.5">
+                        <span className="bg-amber-50 text-amber-800 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
                           Capo {song.capo}
                         </span>
                       )}
                       {song.tuning && song.tuning !== "Estándar" && (
-                        <span className="bg-zinc-150 border-2 border-black font-mono text-[9px] font-black uppercase text-zinc-700 px-1.5 py-0.5">
-                          Afinación: {song.tuning}
+                        <span className="bg-sky-50 text-sky-800 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border border-sky-200">
+                          {song.tuning}
                         </span>
                       )}
                       {secCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 bg-zinc-100 border-2 border-black font-mono text-[9px] font-black uppercase text-zinc-600 px-1.5 py-0.5">
-                          <FileText className="w-2.5 h-2.5 shrink-0" />
+                        <span className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-700 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border border-zinc-200">
+                          <Layers className="w-2.5 h-2.5 text-zinc-400" />
                           {secCount} {secCount === 1 ? "sección" : "secciones"}
                         </span>
                       ) : (
-                        <span className="font-mono text-[9px] text-zinc-400 font-bold px-1 py-0.5">
+                        <span className="font-mono text-[10px] text-zinc-400 font-medium px-1">
                           Sin secciones
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 ml-auto shrink-0 select-none">
-                    <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-black transition-colors" />
+                  <div className="w-8 h-8 rounded-full bg-zinc-100 group-hover:bg-amber-400 text-zinc-400 group-hover:text-zinc-950 flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                    <ChevronRight className="w-4 h-4 stroke-[2.5]" />
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         </div>
       )}
 
-      {/* Floating Plus FAB */}
-      <button
+      {/* Material 3 Expressive Floating Action Button (FAB) for Pixel 10 */}
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 90 }}
+        whileTap={{ scale: 0.9 }}
+        transition={{ type: "spring", stiffness: 450, damping: 20 }}
         onClick={onAddSong}
         title="Añadir nueva canción"
-        className="fixed bottom-6 right-6 w-14 h-14 bg-black border-4 border-black text-white hover:bg-zinc-800 rounded-full flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(255,235,100,1)] transition-transform hover:scale-105 active:scale-95 z-40"
+        className="fixed bottom-6 right-6 sm:absolute sm:bottom-6 sm:right-6 w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-zinc-950 flex items-center justify-center shadow-lg shadow-amber-500/30 cursor-pointer z-40 border border-amber-300/40"
       >
-        <Plus className="w-7 h-7 text-yellow-300 stroke-[3]" />
-      </button>
+        <Plus className="w-7 h-7 stroke-[3]" />
+      </motion.button>
     </div>
   );
 };
+

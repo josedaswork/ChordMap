@@ -1,5 +1,6 @@
 import React from 'react';
-import { Clock, Database } from 'lucide-react';
+import { Database, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Song } from './types';
 import { SongList } from './components/SongList';
 import { SongEditor } from './components/SongEditor';
@@ -33,7 +34,6 @@ export default function App() {
   const [showSyncModal, setShowSyncModal] = React.useState(false);
   const [syncStatus, setSyncStatus] = React.useState<"idle" | "loading" | "success" | "error">("idle");
   const [syncMessage, setSyncMessage] = React.useState("");
-  const [currentTime, setCurrentTime] = React.useState("");
 
   // Load initial data
   React.useEffect(() => {
@@ -148,20 +148,6 @@ export default function App() {
     }
   }, []);
 
-  // Sync clock
-  React.useEffect(() => {
-    const updateTime = () => {
-      setCurrentTime(new Date().toLocaleTimeString("es-ES", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-      }));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Cleanup autosave timeout
   React.useEffect(() => {
     return () => {
@@ -223,6 +209,12 @@ export default function App() {
   };
 
   const handleTriggerSync = async (action: 'upload' | 'download') => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      He.setItem("chordmap_songs", JSON.stringify(songs));
+      setIsSaving(false);
+    }
+
     if (!syncUrl) {
       setSyncStatus("error");
       setSyncMessage('La URL de sincronización no está configurada. Haz clic en "Cloud Setup" para vincular.');
@@ -284,8 +276,12 @@ export default function App() {
                 sectionsJson: cSong.sectionsJson || "[]",
                 lyrics: cSong.lyrics || "",
                 scrollSpeed: cSong.scrollSpeed !== undefined ? Number(cSong.scrollSpeed) : 0,
-                capo: cSong.capo !== undefined ? Number(cSong.capo) : 0,
-                tuning: cSong.tuning || "Estándar",
+                capo: (cSong.capo !== undefined && cSong.capo !== null && cSong.capo !== "")
+                  ? Number(cSong.capo)
+                  : (mergedSongs[matchIndex].capo ?? 0),
+                tuning: (cSong.tuning && cSong.tuning !== "") 
+                  ? cSong.tuning 
+                  : (mergedSongs[matchIndex].tuning || "Estándar"),
                 updatedDate: Number(cSong.updatedDate) || Date.now()
               };
             }
@@ -294,7 +290,7 @@ export default function App() {
               id: Number(cSong.updatedDate) || Date.now(),
               title: cSong.title || "",
               artist: cSong.artist || "",
-              capo: cSong.capo !== undefined ? Number(cSong.capo) : 0,
+              capo: (cSong.capo !== undefined && cSong.capo !== null && cSong.capo !== "") ? Number(cSong.capo) : 0,
               tuning: cSong.tuning || "Estándar",
               sectionsJson: cSong.sectionsJson || "[]",
               lyrics: cSong.lyrics || "",
@@ -308,8 +304,8 @@ export default function App() {
         He.setItem("chordmap_songs", JSON.stringify(mergedSongs));
         setSyncStatus("success");
         setSyncMessage(action === 'upload'
-          ? `¡Se han subido todos tus cambios locales a la nube con éxito! (Total: ${cloudSongs.length} canciones registradas).`
-          : `¡Se han descargado todos los cambios del Excel/Nube con éxito! (Total: ${cloudSongs.length} canciones actualizadas o añadidas).`
+          ? `¡Se han subido tus cambios a la nube! (${cloudSongs.length} canciones registradas)`
+          : `¡Canciones descargadas con éxito! (${cloudSongs.length} sincronizadas)`
         );
       } else {
         throw new Error(resData.message || "Respuesta inesperada de Google Sheets.");
@@ -324,72 +320,99 @@ export default function App() {
   const selectedSong = songs.find(s => s.id === selectedSongId);
 
   return (
-    <div className="min-h-screen bg-zinc-100 flex flex-col justify-start items-center p-0 sm:p-6 font-sans text-black selection:bg-yellow-300 selection:text-black">
-      <div className="w-full max-w-md bg-zinc-50 border-0 sm:border-4 border-black flex flex-col min-h-screen sm:min-h-[820px] sm:max-h-[90vh] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] sm:rounded-[36px] overflow-hidden relative">
-        {/* Navigation Bar */}
-        <nav className="bg-black text-white px-4 py-3.5 flex justify-between items-center border-b-2 border-black select-none shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="bg-yellow-300 text-black px-1.5 py-0.5 font-black text-[10px] border border-black uppercase leading-none">
-              CMAP
-            </div>
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-start p-0 sm:py-6 sm:px-4 font-sans text-zinc-900 selection:bg-amber-400 selection:text-zinc-950">
+      
+      {/* Main Responsive Clean White Container */}
+      <div className="w-full max-w-4xl bg-white min-h-screen sm:min-h-[860px] sm:rounded-3xl border-x sm:border border-zinc-200 shadow-sm flex flex-col overflow-hidden relative">
+        
+        {/* Clean Light Header */}
+        <header className="bg-white text-zinc-900 px-4 sm:px-6 py-3.5 flex justify-between items-center border-b border-zinc-200 select-none shrink-0 shadow-xs z-20">
+          <div className="flex items-center gap-3">
+            <motion.div 
+              whileHover={{ rotate: 10, scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              className="w-9 h-9 rounded-2xl bg-amber-400 text-zinc-950 flex items-center justify-center shadow-xs font-black text-sm"
+            >
+              C
+            </motion.div>
             <div>
-              <h1 className="text-sm font-black tracking-wider uppercase leading-none text-white">
-                CHORDMAP PRO <span className="text-yellow-300 text-[10px] font-black uppercase">PRO</span>
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-extrabold tracking-tight text-zinc-900">
+                  Chordmap Pro
+                </h1>
+              </div>
+              <p className="text-[11px] text-zinc-500 font-medium">Acordes & Tablaturas</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 font-mono text-[9px] text-yellow-300 bg-zinc-900 border border-zinc-700 px-2 py-0.5 rounded">
-            <Clock className="w-3 h-3 shrink-0 text-yellow-300" />
-            <span>UTC: {currentTime || "12:00"}</span>
-          </div>
-        </nav>
 
-        {/* Main Workspace */}
-        <main className="flex-grow overflow-y-auto px-4 py-4 min-h-0 bg-zinc-50">
-          {selectedSong ? (
-            <SongEditor
-              song={selectedSong}
-              isSaving={isSaving}
-              onUpdateSong={handleUpdateSong}
-              onDeleteSong={handleDeleteSong}
-              onBack={() => {
-                if (selectedSong.title.trim() === "") {
-                  handleDeleteSong(selectedSong.id);
-                } else {
-                  setSelectedSongId(null);
-                }
-              }}
-            />
-          ) : (
-            <SongList
-              songs={songs}
-              syncStatus={syncStatus}
-              syncMessage={syncMessage}
-              onSelectSong={setSelectedSongId}
-              onAddSong={handleAddSong}
-              onOpenSyncSettings={() => setShowSyncModal(true)}
-              onTriggerSync={handleTriggerSync}
-            />
-          )}
+          {/* Quick Cloud Status Indicator */}
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.94 }}
+              onClick={() => setShowSyncModal(true)}
+              className="flex items-center gap-1.5 font-sans text-xs font-semibold text-zinc-700 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200 px-3 py-1.5 rounded-full cursor-pointer transition-colors shadow-2xs"
+            >
+              <div className={`w-2 h-2 rounded-full ${
+                syncStatus === 'loading' ? 'bg-amber-400 animate-pulse' :
+                syncStatus === 'success' ? 'bg-emerald-500' :
+                syncStatus === 'error' ? 'bg-rose-500' : 'bg-zinc-400'
+              }`} />
+              <span>
+                {syncUrl ? "Nube Activa" : "Configurar Nube"}
+              </span>
+            </motion.button>
+          </div>
+        </header>
+
+        {/* Main Workspace with Fluid Motion Transition */}
+        <main className="flex-grow overflow-y-auto min-h-0 bg-white relative">
+          <AnimatePresence mode="wait">
+            {selectedSong ? (
+              <motion.div
+                key="editor"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                className="p-3 sm:p-5 pb-12"
+              >
+                <SongEditor
+                  song={selectedSong}
+                  isSaving={isSaving}
+                  onUpdateSong={handleUpdateSong}
+                  onDeleteSong={handleDeleteSong}
+                  onBack={() => {
+                    if (selectedSong.title.trim() === "") {
+                      handleDeleteSong(selectedSong.id);
+                    } else {
+                      setSelectedSongId(null);
+                    }
+                  }}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="list"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                className="p-3 sm:p-5 pb-12"
+              >
+                <SongList
+                  songs={songs}
+                  syncStatus={syncStatus}
+                  syncMessage={syncMessage}
+                  onSelectSong={setSelectedSongId}
+                  onAddSong={handleAddSong}
+                  onOpenSyncSettings={() => setShowSyncModal(true)}
+                  onTriggerSync={handleTriggerSync}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
-
-        {/* Footer */}
-        <footer className="bg-white border-t-2 border-black p-3 flex flex-col justify-center items-center text-center shrink-0 select-none">
-          <div className="space-y-0.5">
-            <p className="text-[8px] font-black tracking-widest uppercase text-zinc-400">
-              Persistencia Cloud - Excel Ledger v2.1
-            </p>
-            <p className="text-[10px] font-black uppercase text-black">
-              © 2026 CHORDMAP ARCHITECTURE
-            </p>
-          </div>
-          <div className="flex items-center gap-1 font-mono text-[8px] mt-1.5 bg-yellow-300 text-black border border-black px-2 py-0.5 rounded shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-            <Database className="w-2.5 h-2.5 text-black" />
-            <span className="font-black uppercase tracking-wider">
-              Sync ledger: Activo
-            </span>
-          </div>
-        </footer>
       </div>
 
       {/* Cloud Excel Sync Settings Modal */}
@@ -403,3 +426,4 @@ export default function App() {
     </div>
   );
 }
+

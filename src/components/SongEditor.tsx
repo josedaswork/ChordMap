@@ -2,8 +2,9 @@ import React from 'react';
 import { 
   ArrowLeft, Loader2, Trash2, ChevronUp, ChevronDown, 
   Copy, AlertTriangle, Plus, FileText, Music, Guitar,
-  Play, Pause
+  Play, Pause, Sparkles, Check
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Song, Section } from '../types';
 import { ChordSectionEditor } from './ChordSectionEditor';
 import { TabSectionEditor } from './TabSectionEditor';
@@ -24,11 +25,11 @@ const SECTION_PRESETS = [
   { name: "Intro", emoji: "🎸" },
   { name: "Verso", emoji: "📖" },
   { name: "Coro", emoji: "🎵" },
-  { name: "Puente", emoji: "Bridge" },
+  { name: "Puente", emoji: "🌉" },
   { name: "Pre-coro", emoji: "🔄" },
   { name: "Solo", emoji: "⚡" },
   { name: "Outro", emoji: "🎶" },
-  { name: "Riff", emoji: "🎸" }
+  { name: "Riff", emoji: "🔥" }
 ];
 
 export const SongEditor: React.FC<SongEditorProps> = ({
@@ -45,11 +46,19 @@ export const SongEditor: React.FC<SongEditorProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [selectedChordForDiagram, setSelectedChordForDiagram] = React.useState<string | null>(null);
 
-  // New states for Lyrics & Autoscroll
+  // States for Lyrics & Autoscroll
   const [showLyricsPanel, setShowLyricsPanel] = React.useState(false);
   const [isEditingLyrics, setIsEditingLyrics] = React.useState(false);
   const [isScrolling, setIsScrolling] = React.useState(false);
   const lyricsContainerRef = React.useRef<HTMLDivElement>(null);
+  const [lyricsFontSize, setLyricsFontSize] = React.useState<number>(() => {
+    return Number(localStorage.getItem('lyricsFontSize') || '14');
+  });
+
+  const changeFontSize = (newSize: number) => {
+    setLyricsFontSize(newSize);
+    localStorage.setItem('lyricsFontSize', String(newSize));
+  };
 
   // Autoscrolling logic
   React.useEffect(() => {
@@ -76,10 +85,9 @@ export const SongEditor: React.FC<SongEditorProps> = ({
       lastTime = time;
 
       const speed = song.scrollSpeed || 3;
-      // speed ranges 1 to 15. mapping: speed * 0.015 px/ms
-      const pixelsToScroll = speed * 0.015 * delta;
+      const factor = (speed * speed) * 0.0012 + speed * 0.0015;
+      const pixelsToScroll = factor * delta;
 
-      // If user scrolled manually, sync our accumulated position
       const currentScrollTop = el.scrollTop;
       if (Math.abs(currentScrollTop - accumulatedScroll) > 10) {
         accumulatedScroll = currentScrollTop;
@@ -88,10 +96,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({
       accumulatedScroll += pixelsToScroll;
       el.scrollTop = Math.round(accumulatedScroll);
 
-      // Check if we hit the bottom of the active scroll container
-      // Add a small buffer (5px) to ensure reliability
       const reachedBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
-      
       if (reachedBottom) {
         setIsScrolling(false);
         return;
@@ -101,10 +106,7 @@ export const SongEditor: React.FC<SongEditorProps> = ({
     };
 
     animationFrameId = requestAnimationFrame(scrollStep);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
+    return () => cancelAnimationFrame(animationFrameId);
   }, [isScrolling, song.scrollSpeed]);
 
   const songChords = React.useMemo(() => {
@@ -132,7 +134,6 @@ export const SongEditor: React.FC<SongEditorProps> = ({
     try {
       const all = song.sectionsJson ? JSON.parse(song.sectionsJson) : [];
       if (!Array.isArray(all)) return [];
-      // Filter out any metadata section like 'custom_chords' from the user-visible list
       return all.filter((s: any) => s && (s.type === 'chords' || s.type === 'tab')) as Section[];
     } catch {
       return [];
@@ -142,7 +143,6 @@ export const SongEditor: React.FC<SongEditorProps> = ({
   const updateSections = (visibleSections: Section[]) => {
     try {
       const all = song.sectionsJson ? JSON.parse(song.sectionsJson) : [];
-      // Keep other non-visible sections (like metadata custom_chords) untouched
       const metadataSections = Array.isArray(all) 
         ? all.filter((s: any) => s && s.type !== 'chords' && s.type !== 'tab') 
         : [];
@@ -243,41 +243,48 @@ export const SongEditor: React.FC<SongEditorProps> = ({
   const currentSections = getSections();
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* Upper action bar */}
-      <div className="flex justify-between items-center bg-zinc-100 border-3 border-black p-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] select-none">
-        <button
+    <div className="space-y-4 font-sans text-zinc-900 dark:text-zinc-100">
+      
+      {/* Upper Navigation Action Bar */}
+      <div className="flex justify-between items-center bg-white/80 dark:bg-zinc-850/80 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 p-2 sm:p-2.5 rounded-2xl shadow-xs select-none">
+        <motion.button
+          whileHover={{ scale: 1.04, x: -2 }}
+          whileTap={{ scale: 0.92 }}
+          transition={{ type: "spring", stiffness: 450, damping: 25 }}
           onClick={onBack}
-          className="px-3 py-1.5 border-2 border-black bg-white hover:bg-zinc-200 text-xs font-black uppercase tracking-wide cursor-pointer inline-flex items-center gap-1.5 transition-colors text-black"
+          className="px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer text-zinc-800 dark:text-zinc-200 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
-          <span>Atrás</span>
-        </button>
+          <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
+          <span>Volver</span>
+        </motion.button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {isSaving ? (
-            <span className="text-[10px] sm:text-xs font-bold text-zinc-500 flex items-center gap-1.5 bg-zinc-50 border-2 border-dashed border-zinc-300 px-2.5 py-1">
-              <Loader2 className="w-3 h-3 animate-spin text-black" />
+            <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/60 px-2.5 py-1 rounded-full">
+              <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
               Guardando...
             </span>
           ) : (
-            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-green-700 bg-green-50 border-2 border-green-800 px-2 py-0.5 animate-pulse">
-              ✓ Todo Guardado
+            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <Check className="w-3 h-3 stroke-[2.5]" />
+              Guardado
             </span>
           )}
           
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.92 }}
             onClick={() => setShowDeleteConfirm(true)}
-            className="p-1 px-2.5 border-2 border-black bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs uppercase cursor-pointer flex items-center gap-1"
+            className="p-1.5 sm:px-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold text-xs cursor-pointer flex items-center gap-1 border border-rose-200 dark:border-rose-800/50 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Eliminar</span>
-          </button>
+            <span className="hidden sm:inline">Borrar</span>
+          </motion.button>
         </div>
       </div>
 
       {/* Song Header Meta Card */}
-      <div className="bg-white border-4 border-black p-4 sm:p-5 space-y-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black select-text">
+      <div className="bg-white/90 dark:bg-zinc-850/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-5 rounded-3xl space-y-4 shadow-sm text-zinc-900 dark:text-zinc-100 select-text">
         <div className="flex justify-between items-start gap-3">
           <div className="flex-1 flex flex-col gap-1">
             <input
@@ -285,20 +292,23 @@ export const SongEditor: React.FC<SongEditorProps> = ({
               value={song.title || ""}
               onChange={e => handleUpdateSongField({ title: e.target.value })}
               placeholder="Título de la Canción..."
-              className="w-full text-lg sm:text-xl font-serif font-black border-none focus:outline-none placeholder:text-zinc-300 bg-transparent text-black"
+              className="w-full text-lg sm:text-xl font-extrabold border-none focus:outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-600 bg-transparent text-zinc-900 dark:text-white"
             />
             <input
               type="text"
               value={song.artist || ""}
               onChange={e => handleUpdateSongField({ artist: e.target.value })}
-              placeholder="Artista / Grupo..."
-              className="w-full text-xs sm:text-sm font-black uppercase tracking-wider border-none focus:outline-none placeholder:text-zinc-300 bg-transparent text-zinc-500"
+              placeholder="Artista / Banda..."
+              className="w-full text-xs sm:text-sm font-semibold tracking-wide border-none focus:outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-600 bg-transparent text-zinc-500 dark:text-zinc-400"
             />
           </div>
 
           {/* Letra & Scroll Button */}
-          <button
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
             onClick={() => {
               setShowLyricsPanel(prev => {
                 if (prev) {
@@ -306,56 +316,59 @@ export const SongEditor: React.FC<SongEditorProps> = ({
                 }
                 return !prev;
               });
-              // default reading mode when opening if lyrics already exist
               if (!showLyricsPanel) {
                 setIsEditingLyrics(!song.lyrics);
               }
             }}
-            className={`px-3 py-2 border-2 border-black font-black text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] select-none shrink-0 ${
-              showLyricsPanel ? 'bg-yellow-350 text-black' : 'bg-white hover:bg-zinc-150 text-black'
+            className={`px-3 py-2 rounded-2xl font-bold text-xs cursor-pointer transition-all flex items-center gap-1.5 border shadow-xs select-none shrink-0 ${
+              showLyricsPanel 
+                ? 'bg-amber-400 text-zinc-950 border-amber-500/50 shadow-md shadow-amber-400/20' 
+                : 'bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700'
             }`}
-            title="Letra y Autoscroll de la canción"
           >
-            <FileText className="w-4 h-4 shrink-0 text-black" />
+            <FileText className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden xs:inline">Letra & Scroll</span>
             <span className="inline xs:hidden">Letra</span>
-          </button>
+          </motion.button>
         </div>
 
-        <div className="h-0.5 bg-black" />
+        <div className="h-px bg-zinc-200/80 dark:bg-zinc-800" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Capo & Tuning Selectors */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Capo */}
-          <div className="flex items-center justify-between border-2 border-black p-2 bg-zinc-50 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-            <span className="text-xs font-black uppercase text-zinc-700">Capotraste:</span>
-            <div className="flex items-center gap-1">
-              <button
+          <div className="flex items-center justify-between border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40">
+            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Capotraste:</span>
+            <div className="flex items-center gap-1.5">
+              <motion.button
+                whileTap={{ scale: 0.85 }}
                 disabled={(song.capo ?? 0) <= 0}
                 onClick={() => handleUpdateSongField({ capo: Math.max(0, (song.capo ?? 0) - 1) })}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-black hover:bg-zinc-200 disabled:opacity-40 font-bold cursor-pointer text-black"
+                className="w-8 h-8 rounded-xl flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 disabled:opacity-30 font-bold cursor-pointer shadow-2xs"
               >
                 -
-              </button>
-              <span className="font-mono text-xs font-black text-black px-2.5 min-w-[4rem] text-center select-none">
+              </motion.button>
+              <span className="font-mono text-xs font-bold px-2 text-center select-none text-zinc-900 dark:text-zinc-100 min-w-[4rem]">
                 {(song.capo ?? 0) === 0 ? "Sin Capo" : `Traste ${song.capo}`}
               </span>
-              <button
+              <motion.button
+                whileTap={{ scale: 0.85 }}
                 disabled={(song.capo ?? 0) >= 12}
                 onClick={() => handleUpdateSongField({ capo: Math.min(12, (song.capo ?? 0) + 1) })}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-black hover:bg-zinc-200 disabled:opacity-40 font-bold cursor-pointer text-black"
+                className="w-8 h-8 rounded-xl flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 disabled:opacity-30 font-bold cursor-pointer shadow-2xs"
               >
                 +
-              </button>
+              </motion.button>
             </div>
           </div>
 
           {/* Tuning */}
-          <div className="flex items-center justify-between border-2 border-black p-2 bg-zinc-50 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-            <span className="text-xs font-black uppercase text-zinc-700">Afinación:</span>
+          <div className="flex items-center justify-between border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40">
+            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Afinación:</span>
             <select
               value={song.tuning || "Estándar"}
               onChange={e => handleUpdateSongField({ tuning: e.target.value })}
-              className="px-2.5 py-1.5 text-xs font-bold border border-black bg-white focus:outline-none cursor-pointer text-black"
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none cursor-pointer shadow-2xs"
             >
               {TUNINGS.map(t => (
                 <option key={t} value={t}>{t}</option>
@@ -365,131 +378,179 @@ export const SongEditor: React.FC<SongEditorProps> = ({
         </div>
       </div>
 
-      {/* Expandable Lyrics and Auto-scroll Panel */}
-      {showLyricsPanel && (
-        <div className="bg-white border-4 border-black p-4 space-y-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black select-none animate-fade-in">
-          {/* Panel Header */}
-          <div className="flex justify-between items-center border-b-2 border-black pb-2">
-            <h4 className="font-sans font-black text-xs uppercase tracking-widest text-black flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-black" />
-              <span>Letra y Autoscroll</span>
-            </h4>
-            
-            {/* Toggle Read/Edit */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditingLyrics(prev => !prev);
-                setIsScrolling(false);
-              }}
-              className="px-2.5 py-1.5 border-2 border-black bg-zinc-50 hover:bg-zinc-150 text-[10px] font-black uppercase cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all text-black"
-            >
-              {isEditingLyrics ? "Ver Letra" : "Editar Letra"}
-            </button>
-          </div>
-
-          {/* Body content */}
-          {isEditingLyrics ? (
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-black uppercase text-zinc-500">Introduce la letra de la canción:</span>
-              <textarea
-                value={song.lyrics || ""}
-                onChange={e => handleUpdateSongField({ lyrics: e.target.value })}
-                placeholder="Escribe o pega aquí la letra de la canción..."
-                className="w-full h-40 p-2.5 font-sans text-xs border-2 border-black bg-white focus:outline-none placeholder:text-zinc-300 text-black leading-relaxed"
-              />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div ref={lyricsContainerRef} className="bg-yellow-50/50 border-2 border-black p-3.5 max-h-60 overflow-y-auto rounded-sm">
-                {song.lyrics ? (
-                  <p className="font-serif text-xs sm:text-sm text-zinc-800 whitespace-pre-wrap leading-relaxed select-text">
-                    {song.lyrics}
-                  </p>
-                ) : (
-                  <div className="text-center py-4 space-y-2">
-                    <p className="text-[11px] text-zinc-400 font-bold italic">
-                      No hay letras guardadas para esta canción.
-                    </p>
-                    <button
+      {/* Expandable Lyrics and Auto-scroll Panel with Spring Animation */}
+      <AnimatePresence>
+        {showLyricsPanel && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, scale: 0.97 }}
+            animate={{ opacity: 1, height: "auto", scale: 1 }}
+            exit={{ opacity: 0, height: 0, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+            className="bg-white/95 dark:bg-zinc-850/95 border border-zinc-200/80 dark:border-zinc-800 p-4 rounded-3xl space-y-4 shadow-md text-zinc-900 dark:text-zinc-100 overflow-hidden"
+          >
+            {/* Panel Header */}
+            <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center border-b border-zinc-200 dark:border-zinc-800 pb-2.5 gap-2">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-amber-500" />
+                <span>Letra & Autoscroll</span>
+              </h4>
+              
+              <div className="flex items-center gap-2.5 w-full xs:w-auto justify-between xs:justify-end">
+                {!isEditingLyrics && song.lyrics && (
+                  <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase">Zoom:</span>
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
                       type="button"
-                      onClick={() => setIsEditingLyrics(true)}
-                      className="px-2.5 py-1 text-[10px] font-black uppercase border border-black bg-white hover:bg-zinc-100 text-black cursor-pointer"
+                      onClick={() => changeFontSize(Math.max(10, lyricsFontSize - 1))}
+                      className="w-5 h-5 flex items-center justify-center bg-white dark:bg-zinc-700 rounded-full font-bold text-xs cursor-pointer shadow-2xs"
                     >
-                      Añadir Letra
-                    </button>
+                      -
+                    </motion.button>
+                    <span className="font-mono text-[10px] font-bold px-1 text-center select-none">
+                      {lyricsFontSize}
+                    </span>
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      type="button"
+                      onClick={() => changeFontSize(Math.min(24, lyricsFontSize + 1))}
+                      className="w-5 h-5 flex items-center justify-center bg-white dark:bg-zinc-700 rounded-full font-bold text-xs cursor-pointer shadow-2xs"
+                    >
+                      +
+                    </motion.button>
                   </div>
                 )}
+
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  type="button"
+                  onClick={() => {
+                    setIsEditingLyrics(prev => !prev);
+                    setIsScrolling(false);
+                  }}
+                  className="px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-[11px] font-bold cursor-pointer transition-colors"
+                >
+                  {isEditingLyrics ? "Ver Letra" : "Editar Letra"}
+                </motion.button>
               </div>
             </div>
-          )}
 
-          {/* Scroll Control Bar */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t-2 border-black pt-3.5 bg-zinc-50 -mx-4 -mb-4 p-4">
-            {/* Auto-scroll Play/Pause button */}
-            <button
-              type="button"
-              onClick={() => setIsScrolling(prev => !prev)}
-              className={`w-full sm:w-auto px-4 py-2 border-2 border-black font-black text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${
-                isScrolling 
-                  ? 'bg-red-500 hover:bg-red-600 text-white shadow-none animate-pulse' 
-                  : 'bg-green-500 hover:bg-green-600 text-white'
-              }`}
-            >
-              {isScrolling ? (
-                <>
-                  <Pause className="w-4 h-4 text-white fill-white shrink-0" />
-                  <span>Pausar Scroll</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 text-white fill-white shrink-0" />
-                  <span>Autoscroll</span>
-                </>
-              )}
-            </button>
-
-            {/* Scroll Speed Controls */}
-            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">
-              <span className="text-[10px] font-black uppercase text-zinc-700">Velocidad de Scroll:</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={(song.scrollSpeed || 3) <= 1}
-                  onClick={() => handleUpdateSongField({ scrollSpeed: Math.max(1, (song.scrollSpeed || 3) - 1) })}
-                  className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 disabled:opacity-40 font-black cursor-pointer text-black"
-                >
-                  -
-                </button>
-                <span className="font-mono text-xs font-black text-black bg-white px-3 py-1 border-2 border-black min-w-[2.5rem] text-center">
-                  {song.scrollSpeed || 3}
+            {/* Body Content */}
+            {isEditingLyrics ? (
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Introduce o pega la letra:
                 </span>
-                <button
-                  type="button"
-                  disabled={(song.scrollSpeed || 3) >= 15}
-                  onClick={() => handleUpdateSongField({ scrollSpeed: Math.min(15, (song.scrollSpeed || 3) + 1) })}
-                  className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 disabled:opacity-40 font-black cursor-pointer text-black"
+                <textarea
+                  value={song.lyrics || ""}
+                  onChange={e => handleUpdateSongField({ lyrics: e.target.value })}
+                  placeholder="Escribe o pega aquí la letra de la canción..."
+                  className="w-full h-44 p-3 font-sans text-xs sm:text-sm rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-amber-400/40 text-zinc-900 dark:text-zinc-100 leading-relaxed"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div 
+                  ref={lyricsContainerRef} 
+                  className="bg-amber-50/40 dark:bg-zinc-900/50 border border-amber-200/50 dark:border-zinc-800 p-4 max-h-64 overflow-y-auto rounded-2xl"
                 >
-                  +
-                </button>
+                  {song.lyrics ? (
+                    <p 
+                      className="font-serif text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed select-text"
+                      style={{ fontSize: `${lyricsFontSize}px` }}
+                    >
+                      {song.lyrics}
+                    </p>
+                  ) : (
+                    <div className="text-center py-6 space-y-2">
+                      <p className="text-xs text-zinc-400 italic">
+                        No hay letras añadidas para esta canción aún.
+                      </p>
+                      <motion.button
+                        whileTap={{ scale: 0.94 }}
+                        type="button"
+                        onClick={() => setIsEditingLyrics(true)}
+                        className="px-3 py-1.5 text-xs font-bold rounded-full bg-amber-400 text-zinc-950 cursor-pointer shadow-xs"
+                      >
+                        + Añadir Letra
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Autoscroll Controls Row */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.93 }}
+                transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                type="button"
+                onClick={() => setIsScrolling(prev => !prev)}
+                className={`w-full sm:w-auto px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2 shadow-xs ${
+                  isScrolling 
+                    ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse shadow-rose-500/30' 
+                    : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/30'
+                }`}
+              >
+                {isScrolling ? (
+                  <>
+                    <Pause className="w-4 h-4 fill-white" />
+                    <span>Pausar Scroll</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-white" />
+                    <span>Autoscroll</span>
+                  </>
+                )}
+              </motion.button>
+
+              {/* Scroll Speed Stepper */}
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">Velocidad:</span>
+                <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-full border border-zinc-200 dark:border-zinc-700">
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    type="button"
+                    disabled={(song.scrollSpeed || 3) <= 1}
+                    onClick={() => handleUpdateSongField({ scrollSpeed: Math.max(1, (song.scrollSpeed || 3) - 1) })}
+                    className="w-7 h-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 disabled:opacity-30 font-bold cursor-pointer shadow-2xs"
+                  >
+                    -
+                  </motion.button>
+                  <span className="font-mono text-xs font-bold px-2 text-center min-w-[2rem]">
+                    {song.scrollSpeed || 3}
+                  </span>
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    type="button"
+                    disabled={(song.scrollSpeed || 3) >= 15}
+                    onClick={() => handleUpdateSongField({ scrollSpeed: Math.min(15, (song.scrollSpeed || 3) + 1) })}
+                    className="w-7 h-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 disabled:opacity-30 font-bold cursor-pointer shadow-2xs"
+                  >
+                    +
+                  </motion.button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Unique Chords Overview Bar */}
-      <div className="bg-white border-4 border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black select-none">
-        <div className="flex items-center justify-between border-b-2 border-black pb-2">
-          <h4 className="font-sans font-black text-xs uppercase tracking-widest text-black flex items-center gap-1.5">
-            <Guitar className="w-4 h-4 text-black" />
+      <div className="bg-white/80 dark:bg-zinc-850/80 border border-zinc-200/80 dark:border-zinc-800 p-3.5 sm:p-4 rounded-3xl space-y-2.5 shadow-xs select-none">
+        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
+          <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+            <Guitar className="w-4 h-4 text-amber-500" />
             <span>Acordes de la canción</span>
-            <span className="bg-black text-yellow-300 text-[10px] font-black px-1.5 py-0.2 rounded-full leading-none">
+            <span className="bg-amber-400 text-zinc-950 text-[10px] font-extrabold px-2 py-0.2 rounded-full leading-none">
               {songChords.length}
             </span>
           </h4>
-          <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">
-            Toca para ver forma
+          <span className="text-[10px] text-zinc-400 font-semibold">
+            Toca para forma & audio
           </span>
         </div>
 
@@ -498,82 +559,102 @@ export const SongEditor: React.FC<SongEditorProps> = ({
             {songChords.map(chord => {
               const isCustom = !!customChords[chord];
               return (
-                <button
+                <motion.button
                   key={chord}
+                  whileHover={{ scale: 1.08, y: -2 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ type: "spring", stiffness: 450, damping: 22 }}
                   onClick={() => setSelectedChordForDiagram(chord)}
-                  className={`px-2.5 py-1.5 border-2 border-black font-serif text-xs font-black rounded-sm cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none flex items-center gap-1 ${
+                  className={`px-3 py-1.5 rounded-xl font-serif text-xs font-bold cursor-pointer flex items-center gap-1 border shadow-2xs ${
                     isCustom
-                      ? "bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                      : "bg-zinc-50 hover:bg-zinc-100 text-zinc-800 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                      ? "bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700"
                   }`}
                 >
                   <span>{chord}</span>
                   {isCustom && (
                     <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" title="Forma personalizada" />
                   )}
-                </button>
+                </motion.button>
               );
             })}
           </div>
         ) : (
-          <p className="text-[10px] text-zinc-400 font-bold italic py-1 text-center">
-            Aún no hay acordes en esta canción. Añade acordes en las secciones de abajo.
+          <p className="text-xs text-zinc-400 italic py-1 text-center">
+            Aún no hay acordes en esta canción. Añade acordes en las secciones.
           </p>
         )}
       </div>
 
-      {/* Sections rendering */}
-      <div className="space-y-6">
+      {/* Sections List */}
+      <div className="space-y-4">
         {currentSections.map((sec, idx) => (
-          <div key={idx} className="space-y-2 animate-fade-in">
-            <div className="flex justify-between items-center border-b-2 border-black pb-1 px-1">
-              <h4 className="font-sans font-black text-xs uppercase tracking-wider text-zinc-500 flex items-center gap-1 select-none">
-                <FileText className="w-3.5 h-3.5 text-zinc-400" />
-                {sec.name} - <span className="font-mono normal-case">({sec.type === "chords" ? "Acordes" : "Tablatura"})</span>
-              </h4>
+          <motion.div
+            key={idx}
+            layout
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="space-y-2 bg-white/90 dark:bg-zinc-850/90 border border-zinc-200/80 dark:border-zinc-800 p-3 sm:p-4 rounded-3xl shadow-xs"
+          >
+            {/* Section Header Controls */}
+            <div className="flex justify-between items-center border-b border-zinc-200 dark:border-zinc-800 pb-2 px-1 select-none">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-amber-400/20 text-amber-500 flex items-center justify-center font-black text-xs">
+                  {idx + 1}
+                </span>
+                <h4 className="font-extrabold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  {sec.name}
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 uppercase">
+                    {sec.type === "chords" ? "Acordes" : "Tablatura"}
+                  </span>
+                </h4>
+              </div>
 
-              {/* Section specific reorder / duplicate / delete actions */}
-              <div className="flex items-center gap-1 select-none">
-                <button
+              {/* Action Buttons (Reorder, Duplicate, Delete) */}
+              <div className="flex items-center gap-1">
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
                   type="button"
                   title="Subir sección"
                   disabled={idx === 0}
                   onClick={() => handleMoveSectionUp(idx)}
-                  className="p-1 border border-black hover:bg-zinc-200 disabled:opacity-30 disabled:hover:bg-transparent text-black rounded cursor-pointer transition-colors flex items-center"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 disabled:opacity-30 cursor-pointer"
                 >
-                  <ChevronUp className="w-3.5 h-3.5" />
-                </button>
-                <button
+                  <ChevronUp className="w-4 h-4" />
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
                   type="button"
                   title="Bajar sección"
                   disabled={idx === currentSections.length - 1}
                   onClick={() => handleMoveSectionDown(idx)}
-                  className="p-1 border border-black hover:bg-zinc-200 disabled:opacity-30 disabled:hover:bg-transparent text-black rounded cursor-pointer transition-colors flex items-center"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 disabled:opacity-30 cursor-pointer"
                 >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-                <button
+                  <ChevronDown className="w-4 h-4" />
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
                   type="button"
                   title="Duplicar sección"
                   onClick={() => handleDuplicateSection(idx)}
-                  className="p-1 border border-black hover:bg-zinc-200 text-black rounded cursor-pointer transition-colors flex items-center gap-0.5 text-[9px] font-black uppercase"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer"
                 >
-                  <Copy className="w-3 h-3" />
-                  <span className="hidden sm:inline">Duplicar</span>
-                </button>
-                <button
+                  <Copy className="w-3.5 h-3.5" />
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
                   type="button"
                   title="Eliminar sección"
                   onClick={() => handleDeleteSection(idx)}
-                  className="p-1 border border-black hover:bg-red-100 text-red-600 rounded cursor-pointer transition-colors flex items-center gap-0.5 text-[9px] font-black uppercase"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-500 cursor-pointer"
                 >
-                  <Trash2 className="w-3 h-3" />
-                  <span className="hidden sm:inline">Eliminar</span>
-                </button>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </motion.button>
               </div>
             </div>
 
-            {/* Embedded section editor depending on type */}
+            {/* Embedded Section Editor */}
             <div>
               {sec.type === 'chords' ? (
                 <ChordSectionEditor
@@ -593,179 +674,216 @@ export const SongEditor: React.FC<SongEditorProps> = ({
                 />
               )}
             </div>
-          </div>
+          </motion.div>
         ))}
 
-        {/* Big plus block for adding a new section */}
-        <div
+        {/* Add Section Button CTA */}
+        <motion.div
+          whileHover={{ scale: 1.015, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 450, damping: 25 }}
           onClick={() => {
             setAddSectionStep('name');
             setShowAddSectionModal(true);
           }}
-          className="p-6 md:p-8 bg-zinc-50 hover:bg-zinc-100 border-4 border-dashed border-black rounded-lg text-center flex flex-col items-center justify-center gap-2 cursor-pointer transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] select-none group"
+          className="p-6 bg-white/70 dark:bg-zinc-850/60 hover:bg-white dark:hover:bg-zinc-850 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-3xl text-center flex flex-col items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors group select-none"
         >
-          <Plus className="w-8 h-8 text-zinc-400 group-hover:text-black transition-colors stroke-[2.5]" />
-          <h5 className="font-black text-xs uppercase tracking-widest text-zinc-500 group-hover:text-black">
+          <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Plus className="w-6 h-6 stroke-[2.8]" />
+          </div>
+          <h5 className="font-extrabold text-xs sm:text-sm text-zinc-800 dark:text-zinc-200">
             Añadir Sección de Canción
           </h5>
-          <p className="text-[10px] text-zinc-400 font-bold">
-            Crea bloques de acordes organizados o una partitura móvil interactiva de 6 cuerdas.
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium max-w-xs">
+            Agrega bloques de acordes organizados o una partitura interactiva de 6 cuerdas.
           </p>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Add Section Modal */}
-      {showAddSectionModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-4 z-50 select-none animate-fade-in">
-          <div className="bg-white border-4 border-black w-full max-w-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative flex flex-col">
-            <div className="bg-black text-white p-3.5 flex justify-between items-center font-bold font-sans">
-              <span className="font-black text-xs uppercase tracking-widest text-white">
-                Añadir nueva sección
-              </span>
-              <button
-                onClick={() => setShowAddSectionModal(false)}
-                className="text-white hover:text-yellow-300 font-bold hover:underline py-0.5 px-2 text-xs"
-              >
-                Cerrar
-              </button>
-            </div>
+      {/* Add Section Modal with Spring Motion */}
+      <AnimatePresence>
+        {showAddSectionModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 select-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 20 }}
+              transition={{ type: "spring", stiffness: 420, damping: 28 }}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="bg-[#1c1d22] text-white p-4 flex justify-between items-center border-b border-zinc-800">
+                <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  Añadir nueva sección
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
+                  onClick={() => setShowAddSectionModal(false)}
+                  className="text-zinc-400 hover:text-white text-xs font-bold px-2 py-1"
+                >
+                  Cerrar
+                </motion.button>
+              </div>
 
-            <div className="p-5 space-y-4">
-              {addSectionStep === 'name' ? (
-                <div className="space-y-4 animate-fade-in">
-                  <span className="text-xs font-black uppercase text-black block tracking-wider">
-                    ¿Qué sección deseas añadir?
-                  </span>
-                  
-                  {/* Presets Grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {SECTION_PRESETS.map(preset => (
-                      <button
-                        key={preset.name}
-                        onClick={() => handleSelectPresetName(preset.name)}
-                        className="py-2 px-3 border-2 border-black bg-zinc-50 hover:bg-yellow-100 text-left font-bold text-xs uppercase cursor-pointer flex items-center gap-2 rounded transition-colors text-black"
-                      >
-                        <span className="text-base select-none">{preset.emoji}</span>
-                        <span>{preset.name}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="h-px bg-zinc-200" />
-
-                  {/* Custom Name input */}
-                  <form onSubmit={handleCustomNameSubmit} className="space-y-2">
-                    <span className="text-[10px] font-black uppercase text-zinc-500">
-                      O un nombre personalizado:
+              <div className="p-5 space-y-4">
+                {addSectionStep === 'name' ? (
+                  <div className="space-y-4">
+                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 block">
+                      ¿Qué sección deseas añadir?
                     </span>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={customSectionName}
-                        onChange={e => setCustomSectionName(e.target.value)}
-                        placeholder="Ej: Coro Alternativo, Puente Trágico, Outro Arpegio..."
-                        className="flex-1 px-3 py-1.5 text-xs font-bold border-2 border-black bg-white focus:outline-none text-black"
-                      />
+                    
+                    {/* Presets Grid */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {SECTION_PRESETS.map(preset => (
+                        <motion.button
+                          key={preset.name}
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleSelectPresetName(preset.name)}
+                          className="py-2.5 px-3 rounded-2xl bg-zinc-100 hover:bg-amber-100/70 dark:bg-zinc-800 dark:hover:bg-amber-950/40 text-left font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700"
+                        >
+                          <span className="text-base select-none">{preset.emoji}</span>
+                          <span>{preset.name}</span>
+                        </motion.button>
+                      ))}
+                    </div>
+
+                    <div className="h-px bg-zinc-200 dark:bg-zinc-800" />
+
+                    {/* Custom Name Input */}
+                    <form onSubmit={handleCustomNameSubmit} className="space-y-2">
+                      <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                        O nombre personalizado:
+                      </span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={customSectionName}
+                          onChange={e => setCustomSectionName(e.target.value)}
+                          placeholder="Ej: Coro Alternativo, Outro..."
+                          className="flex-1 px-3 py-2 text-xs font-medium rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-400/40 text-zinc-900 dark:text-zinc-100"
+                        />
+                        <motion.button
+                          whileTap={{ scale: 0.92 }}
+                          type="submit"
+                          disabled={!customSectionName.trim()}
+                          className="px-4 py-2 bg-amber-400 text-zinc-950 hover:bg-amber-500 disabled:opacity-40 text-xs font-bold rounded-xl cursor-pointer"
+                        >
+                          Siguiente
+                        </motion.button>
+                      </div>
+                    </form>
+                  </div>
+                ) : (
+                  /* Choose Section Type */
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-400">
                       <button
-                        type="submit"
-                        disabled={!customSectionName.trim()}
-                        className="px-4 py-1.5 bg-black text-white hover:bg-zinc-800 disabled:opacity-40 text-xs font-black uppercase tracking-wide cursor-pointer rounded"
+                        onClick={() => setAddSectionStep('name')}
+                        className="text-amber-500 underline cursor-pointer hover:no-underline"
                       >
-                        OK
+                        ← Cambiar nombre
                       </button>
+                      <span>/</span>
+                      <span className="text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                        {customSectionName.trim() || selectedPresetName}
+                      </span>
                     </div>
-                  </form>
-                </div>
-              ) : (
-                /* Choose Section Type step */
-                <div className="space-y-4 animate-fade-in">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-zinc-500 uppercase">
-                    <button
-                      onClick={() => setAddSectionStep('name')}
-                      className="text-black underline cursor-pointer hover:no-underline"
-                    >
-                      ← Volver
-                    </button>
-                    <span>/</span>
-                    <span className="text-black bg-zinc-100 border border-black px-1.5 rounded">
-                      {customSectionName.trim() || selectedPresetName}
+
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">
+                      Selecciona el formato de contenido:
                     </span>
-                  </div>
 
-                  <span className="text-xs font-black uppercase text-black block tracking-wider">
-                    ¿Qué tipo de contenido va a tener?
-                  </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Chords option */}
+                      <motion.div
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => handleAddSectionFinal('chords')}
+                        className="bg-zinc-50 dark:bg-zinc-800/80 hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-zinc-200 dark:border-zinc-700 hover:border-amber-400 p-4 text-center cursor-pointer flex flex-col items-center justify-center gap-2 rounded-2xl shadow-xs transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-amber-400/20 text-amber-500 flex items-center justify-center">
+                          <Music className="w-5 h-5" />
+                        </div>
+                        <h4 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
+                          Acordes
+                        </h4>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                          Progresiones con pulsos y repeticiones.
+                        </p>
+                      </motion.div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {/* Chords option */}
-                    <div
-                      onClick={() => handleAddSectionFinal('chords')}
-                      className="bg-zinc-50 hover:bg-yellow-50 border-3 border-black p-4 text-center cursor-pointer flex flex-col items-center justify-center gap-2 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px]"
-                    >
-                      <Music className="w-8 h-8 text-amber-500" />
-                      <h4 className="font-serif font-black text-black text-sm">
-                        Acordes
-                      </h4>
-                      <p className="text-[10px] text-zinc-500 font-bold leading-normal">
-                        Progresión con duraciones por pulsos.
-                      </p>
+                      {/* Tab option */}
+                      <motion.div
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => handleAddSectionFinal('tab')}
+                        className="bg-zinc-50 dark:bg-zinc-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-zinc-200 dark:border-zinc-700 hover:border-emerald-400 p-4 text-center cursor-pointer flex flex-col items-center justify-center gap-2 rounded-2xl shadow-xs transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-emerald-400/20 text-emerald-500 flex items-center justify-center">
+                          <Guitar className="w-5 h-5" />
+                        </div>
+                        <h4 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
+                          Tablatura
+                        </h4>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                          Fretboard interactivo de 6 cuerdas.
+                        </p>
+                      </motion.div>
                     </div>
-
-                    {/* Tab option */}
-                    <div
-                      onClick={() => handleAddSectionFinal('tab')}
-                      className="bg-zinc-50 hover:bg-emerald-50 border-3 border-black p-4 text-center cursor-pointer flex flex-col items-center justify-center gap-2 rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px]"
-                    >
-                      <Guitar className="w-8 h-8 text-emerald-500" />
-                      <h4 className="font-serif font-black text-black text-sm">
-                        Tablatura
-                      </h4>
-                      <p className="text-[10px] text-zinc-500 font-bold leading-normal">
-                        Fretboard interactivo móvil de 6 cuerdas.
-                      </p>
-                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* Delete Song Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none animate-fade-in">
-          <div className="bg-white border-4 border-black p-5 w-full max-w-sm shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black space-y-4">
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-6 h-6 shrink-0 stroke-[2.5]" />
-              <h3 className="font-serif text-lg font-black uppercase text-black">
-                ¿Eliminar canción?
-              </h3>
-            </div>
-            <p className="text-xs text-zinc-500 font-black leading-relaxed">
-              Esta acción no se puede deshacer y borrará permanentemente la canción{" "}
-              <strong>"{song.title || "Sin título"}"</strong> de tus acordes locales.
-            </p>
-            <div className="flex justify-end gap-2.5 pt-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-3.5 py-1.5 border-2 border-black bg-white hover:bg-zinc-150 text-xs font-black uppercase cursor-pointer text-black"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  onDeleteSong(song.id);
-                  setShowDeleteConfirm(false);
-                }}
-                className="px-3.5 py-1.5 border-2 border-black bg-red-600 text-white hover:bg-red-700 text-xs font-black uppercase cursor-pointer"
-              >
-                Eliminar
-              </button>
-            </div>
+      {/* Delete Song Confirmation Modal with Spring */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-3xl w-full max-w-sm shadow-2xl text-zinc-900 dark:text-zinc-100 space-y-4"
+            >
+              <div className="flex items-center gap-2 text-rose-500">
+                <AlertTriangle className="w-6 h-6 shrink-0 stroke-[2.2]" />
+                <h3 className="font-extrabold text-base text-zinc-900 dark:text-white">
+                  ¿Eliminar canción?
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Esta acción borrará permanentemente{" "}
+                <strong className="text-zinc-800 dark:text-zinc-200">"{song.title || "Sin título"}"</strong>{" "}
+                de tu repertorio local.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold cursor-pointer text-zinc-800 dark:text-zinc-200"
+                >
+                  Cancelar
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => {
+                    onDeleteSong(song.id);
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer shadow-sm shadow-rose-600/30"
+                >
+                  Eliminar
+                </motion.button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Interactive Chord Diagram & Edit Popup */}
       {selectedChordForDiagram && (

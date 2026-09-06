@@ -1,5 +1,6 @@
 import React from 'react';
-import { Plus, Minus, Trash2, FileText, Check, AlertTriangle, AlertCircle, X, RotateCcw } from 'lucide-react';
+import { Plus, Minus, Trash2, FileText, Check, AlertTriangle, AlertCircle, X, RotateCcw, Edit3, Eye, ZoomIn, ZoomOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { TabContent } from '../types';
 import { parseTextTab } from '../utils/tabParser';
 
@@ -9,7 +10,8 @@ interface TabSectionEditorProps {
 }
 
 const STRINGS = ["e", "B", "G", "D", "A", "E"];
-const FRETS = [0, 1, 2, 3, 4, 5, 7, 9, 10, 12, 14, 15];
+// Ensure all frets 0 through 24 are explicitly present and complete
+const FRETS = Array.from({ length: 25 }, (_, i) => i);
 const TECHNIQUES = [
   { symbol: "h", label: "h", desc: "Hammer-on" },
   { symbol: "p", label: "p", desc: "Pull-off" },
@@ -74,7 +76,6 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
 
   const pushToHistoryAndUpdate = (newTab: string[][], newRepeat: number, newChords: string[]) => {
     setHistory(prev => {
-      // Avoid pushing consecutive identical states to save memory
       const nextHistory = [...prev, content];
       if (nextHistory.length > 30) {
         return nextHistory.slice(nextHistory.length - 30);
@@ -90,7 +91,6 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
     setHistory(prev => prev.slice(0, prev.length - 1));
     onChange(prevContent);
     
-    // Clear selection if it is out of bounds in the undone state
     try {
       const parsed = JSON.parse(prevContent);
       if (parsed && Array.isArray(parsed.tab)) {
@@ -118,10 +118,8 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
       setImportWarnings(result.warnings);
     }
     
-    // Apply parsed values and push to history
     pushToHistoryAndUpdate(result.tab, result.repeat, result.chords);
     
-    // Auto close if there are no warnings. If there are warnings, keep it open so they see them, but they can dismiss.
     if (!result.warnings || result.warnings.length === 0) {
       setIsImporting(false);
       setImportText("");
@@ -233,137 +231,158 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
   };
 
   return (
-    <div className="bg-zinc-50 border-3 border-black p-4 space-y-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] select-none">
+    <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800 p-3 sm:p-4 rounded-2xl space-y-3.5 shadow-2xs font-sans text-zinc-900 dark:text-zinc-100 select-none">
       
       {/* Import Text Tab Section */}
-      <div className="bg-white border-2 border-black p-3.5 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] space-y-2">
+      <div className="bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-750 p-3 sm:p-3.5 rounded-2xl shadow-2xs space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileText className="w-4.5 h-4.5 text-black" />
-            <span className="font-sans font-black text-xs uppercase tracking-widest text-black">Lector de Tablatura</span>
+            <div className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-amber-700 dark:text-amber-300">
+              <FileText className="w-4 h-4 stroke-[2]" />
+            </div>
+            <span className="font-sans font-extrabold text-xs text-zinc-800 dark:text-zinc-200">
+              Lector de Tablatura
+            </span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {history.length > 0 && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.88 }}
                 type="button"
                 onClick={handleUndo}
                 title={`Deshacer último cambio (${history.length})`}
-                className="w-8 h-8 flex items-center justify-center border-2 border-black rounded-sm cursor-pointer transition-all bg-zinc-100 hover:bg-zinc-200 text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none relative"
+                className="w-8 h-8 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 rounded-xl cursor-pointer bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 shadow-2xs relative"
               >
-                <RotateCcw className="w-4 h-4" />
-                <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white">
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="absolute -top-1 -right-1 bg-amber-500 text-zinc-950 text-[8px] font-black w-3.5 h-3.5 flex items-center justify-center rounded-full">
                   {history.length}
                 </span>
-              </button>
+              </motion.button>
             )}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.90 }}
               type="button"
               onClick={() => {
                 setIsImporting(!isImporting);
                 setImportError(null);
                 setImportWarnings([]);
               }}
-              title={isImporting ? "Cerrar Lector" : "Pegar Tablatura de Texto (T)"}
-              className={`w-8 h-8 flex items-center justify-center border-2 border-black rounded-sm cursor-pointer transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
-                isImporting ? "bg-red-150 hover:bg-red-200 text-red-800" : "bg-yellow-350 hover:bg-yellow-400 text-black"
+              title={isImporting ? "Cerrar Lector" : "Pegar Tablatura de Texto"}
+              className={`h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-xl cursor-pointer font-bold text-xs shadow-2xs transition-colors ${
+                isImporting 
+                  ? "bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" 
+                  : "bg-amber-400 hover:bg-amber-500 text-zinc-950"
               }`}
             >
               {isImporting ? (
-                <X className="w-4 h-4" />
+                <>
+                  <X className="w-3.5 h-3.5" />
+                  <span>Cerrar</span>
+                </>
               ) : (
-                <span 
-                  className="font-serif font-black italic text-[17px] leading-none select-none animate-pulse-subtle" 
-                  style={{ fontFamily: "'Times New Roman', Times, serif" }}
-                >
-                  T
-                </span>
+                <>
+                  <span className="font-serif italic font-black text-sm">T</span>
+                  <span>Pegar texto</span>
+                </>
               )}
-            </button>
+            </motion.button>
           </div>
         </div>
 
-        {isImporting && (
-          <div className="pt-3 border-t-2 border-dashed border-zinc-200 space-y-3 animate-fade-in">
-            <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
-              Pega un fragmento de tablatura de guitarra (6 líneas de texto con guiones como <code className="font-mono bg-zinc-100 px-1 py-0.5 rounded text-black font-black">e|---</code>). Detectaremos los acordes alineados arriba y repeticiones como <code className="font-mono bg-zinc-100 px-1 py-0.5 rounded text-black font-black">x2</code>.
-            </p>
+        <AnimatePresence>
+          {isImporting && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className="pt-2.5 border-t border-dashed border-zinc-200 dark:border-zinc-750 space-y-2.5 overflow-hidden"
+            >
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Pega tablatura de guitarra (6 líneas de texto con guiones como <code className="font-mono bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-amber-600 dark:text-amber-400 font-bold">e|---</code>). Se detectarán acordes superiores y repeticiones como <code className="font-mono bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-amber-600 dark:text-amber-400 font-bold">x2</code>.
+              </p>
 
-            <div className="relative">
-              <textarea
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-                placeholder={`Ejemplo:\n Em           C                    D             Em\ne|---------------------------x----------------x---------------x--|\nB|-------------0h1-----------x------3---3-----x---0-----------x--|\nG|2h4p20---0---0-------------x------0h2-2-----x---0-----------x--|\nD|------0h2----0h2-----------x------0---------x---2-----------x--|\nA|-------------3-------------x----------------x---------------x--|\nE|0-------------------------------------------x---0-----------x--| x2`}
-                rows={8}
-                className="w-full p-2.5 font-mono text-xs border-2 border-black focus:outline-none focus:bg-yellow-50/20 text-black bg-zinc-50 leading-relaxed rounded-sm resize-y"
-              />
-              {importText && (
+              <div className="relative">
+                <textarea
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  placeholder={`Ejemplo:\n Em           C                    D             Em\ne|---------------------------x----------------x---------------x--|\nB|-------------0h1-----------x------3---3-----x---0-----------x--|\nG|2h4p20---0---0-------------x------0h2-2-----x---0-----------x--|\nD|------0h2----0h2-----------x------0---------x---2-----------x--|\nA|-------------3-------------x----------------x---------------x--|\nE|0-------------------------------------------x---0-----------x--| x2`}
+                  rows={7}
+                  className="w-full p-2.5 font-mono text-xs border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-amber-400/40 text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-900 leading-relaxed rounded-xl resize-y"
+                />
+                {importText && (
+                  <button
+                    type="button"
+                    onClick={() => setImportText("")}
+                    className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer shadow-2xs"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+
+              {importError && (
+                <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 p-2.5 rounded-xl flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="text-xs text-rose-700 dark:text-rose-300">
+                    <span className="font-bold block text-[10px] uppercase mb-0.5">Error de Formato:</span>
+                    <p>{importError}</p>
+                  </div>
+                </div>
+              )}
+
+              {importWarnings.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 p-2.5 rounded-xl flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-800 dark:text-amber-200 space-y-0.5">
+                    <span className="font-bold block text-[10px] uppercase">Aviso de importación:</span>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      {importWarnings.map((warning, idx) => (
+                        <li key={idx}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => setImportText("")}
-                  className="absolute top-2 right-2 text-[10px] font-black uppercase px-2 py-0.5 border border-zinc-450 bg-white hover:bg-zinc-100 text-zinc-500 rounded cursor-pointer"
+                  onClick={() => {
+                    setIsImporting(false);
+                    setImportError(null);
+                    setImportWarnings([]);
+                    setImportText("");
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer"
                 >
-                  Limpiar
+                  Cancelar
                 </button>
-              )}
-            </div>
-
-            {importError && (
-              <div className="bg-red-50 border-2 border-red-600 p-3 rounded flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-red-800">
-                  <span className="font-black uppercase block tracking-wider text-[10px] text-red-600 mb-0.5">Error de Formato:</span>
-                  <p className="font-bold">{importError}</p>
-                </div>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.94 }}
+                  type="button"
+                  onClick={handleImportTab}
+                  disabled={!importText.trim()}
+                  className="px-4 py-1.5 bg-amber-400 hover:bg-amber-500 text-zinc-950 rounded-xl text-xs font-bold disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[2.8]" />
+                  <span>Analizar y Cargar</span>
+                </motion.button>
               </div>
-            )}
-
-            {importWarnings.length > 0 && (
-              <div className="bg-amber-50 border-2 border-amber-500 p-3 rounded flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-800 space-y-1">
-                  <span className="font-black uppercase block tracking-wider text-[10px] text-amber-600">¡Cargado con advertencias!</span>
-                  <ul className="list-disc list-inside space-y-0.5 font-medium">
-                    {importWarnings.map((warning, idx) => (
-                      <li key={idx}>{warning}</li>
-                    ))}
-                  </ul>
-                  <p className="text-[10px] text-zinc-500 italic mt-1 font-bold">Hemos adaptado el contenido al editor, puedes seguir editándolo a mano.</p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsImporting(false);
-                  setImportError(null);
-                  setImportWarnings([]);
-                  setImportText("");
-                }}
-                className="px-4 py-2 border-2 border-black text-xs font-black uppercase bg-white hover:bg-zinc-100 text-black cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleImportTab}
-                disabled={!importText.trim()}
-                className="px-4 py-2 bg-yellow-300 text-black border-2 border-black text-xs font-black uppercase hover:bg-yellow-400 disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all"
-              >
-                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Analizar y Cargar</span>
-              </button>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Zoom / Font Size Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-zinc-100 border-2 border-black p-2 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-xs font-black uppercase text-black select-none gap-2">
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] tracking-wider text-zinc-600 font-sans font-black">Visualización</span>
-          <button
+      {/* Toolbar: Edit mode + Font size */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-750 p-2.5 rounded-2xl shadow-2xs gap-2">
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.92 }}
             type="button"
             onClick={() => {
               setIsEditing(prev => {
@@ -373,98 +392,104 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                 return !prev;
               });
             }}
-            className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase cursor-pointer transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1 ${
-              isEditing ? "bg-yellow-350 text-black font-black" : "bg-white text-zinc-600 hover:text-black hover:bg-zinc-50"
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-1.5 shadow-2xs ${
+              isEditing 
+                ? "bg-amber-400 text-zinc-950 font-extrabold" 
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700"
             }`}
           >
-            <span className="text-xs">{isEditing ? "✓" : "✎"}</span>
-            <span>{isEditing ? "Modo Edición" : "Editar Tablatura"}</span>
-          </button>
+            {isEditing ? <Edit3 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span>{isEditing ? "Modo Edición Activo" : "Editar Tablatura"}</span>
+          </motion.button>
         </div>
         
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] text-zinc-500 font-black font-sans">Escala:</span>
-          <button
+        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+          <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mr-1">Zoom:</span>
+          <motion.button
+            whileTap={{ scale: 0.85 }}
             type="button"
             onClick={() => setTabFontSize(prev => Math.max(9, prev - 1))}
-            className="w-6 h-6 flex items-center justify-center bg-white border border-black hover:bg-zinc-200 text-[10px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all cursor-pointer text-black"
-            title="Reducir tamaño de letra"
+            className="w-7 h-7 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-xs font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer border border-zinc-200 dark:border-zinc-700 shadow-2xs"
+            title="Reducir escala"
           >
-            A-
-          </button>
-          <span className="font-mono text-xs font-black text-black bg-white px-2 py-0.5 border border-black min-w-[34px] text-center">
+            -
+          </motion.button>
+          <span className="font-mono text-xs font-bold text-zinc-800 dark:text-zinc-200 px-2 py-0.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md min-w-[34px] text-center">
             {tabFontSize}px
           </span>
-          <button
+          <motion.button
+            whileTap={{ scale: 0.85 }}
             type="button"
             onClick={() => setTabFontSize(prev => Math.min(22, prev + 1))}
-            className="w-6 h-6 flex items-center justify-center bg-white border border-black hover:bg-zinc-200 text-[10px] font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all cursor-pointer text-black"
-            title="Aumentar tamaño de letra"
+            className="w-7 h-7 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-xs font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer border border-zinc-200 dark:border-zinc-700 shadow-2xs"
+            title="Aumentar escala"
           >
-            A+
-          </button>
+            +
+          </motion.button>
         </div>
       </div>
 
       {/* Scrollable Tab Grid */}
-      <div className="bg-white border-2 border-black p-2 overflow-x-auto shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+      <div className="bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-750 p-3 rounded-2xl overflow-x-auto shadow-2xs">
         <div className="min-w-max flex flex-col font-mono text-sm leading-tight">
           
           {isEditing && (
             <>
               {/* Column deletion row */}
-              <div className="flex items-center animate-fade-in" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
-                <span className="w-8 text-[9px] font-black uppercase text-red-500 text-right pr-2 select-none shrink-0">
+              <div className="flex items-center" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
+                <span className="w-8 text-[9px] font-bold uppercase text-rose-500 text-right pr-2 select-none shrink-0">
                   Elim.
                 </span>
                 <span className="shrink-0 w-2 text-zinc-300"> </span>
                 <div className="flex gap-0.5">
                   {chords.map((_, cIdx) => (
-                    <button
+                    <motion.button
                       key={cIdx}
+                      whileTap={{ scale: 0.8 }}
                       type="button"
                       title={`Eliminar columna #${cIdx + 1}`}
                       onClick={() => handleDeleteColumn(cIdx)}
-                      className="flex items-center justify-center bg-red-50 hover:bg-red-200 border border-red-300 hover:border-red-600 text-red-600 rounded cursor-pointer transition-colors"
+                      className="flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/50 text-rose-600 dark:text-rose-300 rounded cursor-pointer transition-colors"
                       style={{
                         width: `${Math.round(tabFontSize * 1.7)}px`,
                         height: `${Math.round(tabFontSize * 1.5)}px`
                       }}
                     >
                       <Trash2 className="w-2.5 h-2.5" />
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
                 <span className="shrink-0 w-2 text-zinc-300"> </span>
               </div>
 
               {/* Column insertion row */}
-              <div className="flex items-center mt-1 animate-fade-in" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
-                <span className="w-8 text-[9px] font-black uppercase text-emerald-500 text-right pr-2 select-none shrink-0">
+              <div className="flex items-center mt-1" style={{ height: `${Math.round(tabFontSize * 1.9)}px` }}>
+                <span className="w-8 text-[9px] font-bold uppercase text-emerald-500 text-right pr-2 select-none shrink-0">
                   Ins.
                 </span>
                 <span className="shrink-0 w-2 text-zinc-300"> </span>
                 <div className="flex gap-0.5">
                   {chords.map((_, cIdx) => (
-                    <button
+                    <motion.button
                       key={cIdx}
+                      whileTap={{ scale: 0.8 }}
                       type="button"
                       title={`Insertar columna vacía antes de la #${cIdx + 1}`}
                       onClick={() => handleInsertColumn(cIdx)}
-                      className="flex items-center justify-center bg-emerald-50 hover:bg-emerald-200 border border-emerald-300 hover:border-emerald-600 text-emerald-600 rounded cursor-pointer transition-colors"
+                      className="flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-300 rounded cursor-pointer transition-colors"
                       style={{
                         width: `${Math.round(tabFontSize * 1.7)}px`,
                         height: `${Math.round(tabFontSize * 1.5)}px`
                       }}
                     >
                       <Plus className="w-2.5 h-2.5" />
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
                 <span className="shrink-0 w-2 text-zinc-300"> </span>
               </div>
 
-              <div className="h-px bg-zinc-200 my-1.5" />
+              <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-2" />
             </>
           )}
 
@@ -472,7 +497,7 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
           {(isEditing || chords.some(c => c && c.trim() !== "")) && (
             <>
               <div className="flex items-center" style={{ height: `${Math.round(tabFontSize * 2.8)}px` }}>
-                <span className="w-8 text-[10px] font-black uppercase text-amber-600 text-right pr-2 select-none shrink-0" style={{ fontSize: `${Math.max(8, tabFontSize - 3)}px` }}>
+                <span className="w-8 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 text-right pr-2 select-none shrink-0" style={{ fontSize: `${Math.max(8, tabFontSize - 3)}px` }}>
                   Aco.
                 </span>
                 <span className="shrink-0 w-2 text-zinc-300"> </span>
@@ -483,14 +508,14 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                       <div
                         key={cIdx}
                         onClick={() => isEditing && handleSelectCell(-1, cIdx)}
-                        className={`flex items-center justify-center font-serif font-black border rounded transition-all ${
+                        className={`flex items-center justify-center font-serif font-extrabold border rounded transition-all select-none ${
                           isEditing && isSel 
-                            ? "border-black bg-amber-200 text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]" 
+                            ? "border-amber-400 bg-amber-400 text-zinc-950 shadow-xs ring-1 ring-amber-300" 
                             : chord 
-                            ? "border-amber-400 bg-amber-50 text-amber-700 font-bold" 
+                            ? "border-amber-300/80 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200" 
                             : isEditing 
-                            ? "border-zinc-150 hover:border-black text-zinc-350 cursor-pointer"
-                            : "border-transparent text-zinc-200"
+                            ? "border-zinc-200 dark:border-zinc-750 hover:border-zinc-400 text-zinc-400 cursor-pointer"
+                            : "border-transparent text-zinc-300 dark:text-zinc-600"
                         }`}
                         style={{
                           width: `${Math.round(tabFontSize * 1.7)}px`,
@@ -505,7 +530,7 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                 </div>
                 <span className="shrink-0 w-2 text-zinc-300"> </span>
               </div>
-              <div className="h-px bg-zinc-200 my-1.5" />
+              <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1.5" />
             </>
           )}
 
@@ -514,10 +539,10 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
             const stringRow = columns[sIdx] || [];
             return (
               <div key={sIdx} className="flex items-center" style={{ height: `${Math.round(tabFontSize * 2.5)}px` }}>
-                <span className="w-8 font-black text-zinc-600 text-right pr-2 select-none shrink-0" style={{ fontSize: `${Math.round(tabFontSize * 1.15)}px` }}>
+                <span className="w-8 font-bold text-zinc-600 dark:text-zinc-400 text-right pr-2 select-none shrink-0" style={{ fontSize: `${Math.round(tabFontSize * 1.15)}px` }}>
                   {str}
                 </span>
-                <span className="shrink-0 text-zinc-400 w-2 text-center font-light select-none" style={{ fontSize: `${tabFontSize}px` }}>
+                <span className="shrink-0 text-zinc-300 dark:text-zinc-600 w-2 text-center font-light select-none" style={{ fontSize: `${tabFontSize}px` }}>
                   |
                 </span>
                 <div className="flex gap-0.5 shrink-0">
@@ -528,14 +553,14 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                       <div
                         key={cIdx}
                         onClick={() => isEditing && handleSelectCell(sIdx, cIdx)}
-                        className={`flex items-center justify-center font-black border rounded transition-all ${
+                        className={`flex items-center justify-center font-bold border rounded transition-all select-none ${
                           isEditing && isSel 
-                            ? "bg-black text-yellow-300 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]" 
+                            ? "bg-amber-400 text-zinc-950 border-amber-400 shadow-xs ring-1 ring-amber-300" 
                             : hasNote 
-                            ? "bg-zinc-100 text-black border-black font-bold" 
+                            ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700 font-extrabold" 
                             : isEditing
-                            ? "bg-transparent text-zinc-300 border-transparent hover:border-zinc-300 cursor-pointer"
-                            : "bg-transparent text-zinc-350 border-transparent"
+                            ? "bg-transparent text-zinc-300 dark:text-zinc-600 border-transparent hover:border-zinc-300 dark:hover:border-zinc-600 cursor-pointer"
+                            : "bg-transparent text-zinc-300 dark:text-zinc-700 border-transparent"
                         }`}
                         style={{
                           width: `${Math.round(tabFontSize * 1.7)}px`,
@@ -548,11 +573,11 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                     );
                   })}
                 </div>
-                <span className="shrink-0 text-zinc-400 w-2 text-center font-light select-none" style={{ fontSize: `${tabFontSize}px` }}>
+                <span className="shrink-0 text-zinc-300 dark:text-zinc-600 w-2 text-center font-light select-none" style={{ fontSize: `${tabFontSize}px` }}>
                   |
                 </span>
                 {repeats > 1 && sIdx === 5 && (
-                  <span className="font-mono text-xs font-black text-zinc-600 pl-3 self-center select-none shrink-0 border-l border-zinc-200">
+                  <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 pl-3 self-center select-none shrink-0 border-l border-zinc-200 dark:border-zinc-700">
                     ×{repeats}
                   </span>
                 )}
@@ -562,167 +587,185 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
         </div>
       </div>
 
-      {/* Editor Keyboard / Controls */}
-      {selectedCell ? (
-        <div className="bg-white border-2 border-black p-3 space-y-3 animate-fade-in">
-          <div className="flex items-center justify-between border-b-2 border-black pb-2">
-            <span className="text-[10px] font-black uppercase text-zinc-500">
-              Celda {selectedCell.s === -1 ? `Acorde Columna #${selectedCell.c + 1}` : `Cuerda ${STRINGS[selectedCell.s]} - Posición #${selectedCell.c + 1}`}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-xs font-black bg-zinc-100 border border-black px-2 py-0.5 text-black">
-                Valor: {currentValue === "-" ? "vacío (-)" : currentValue || "ninguno"}
+      {/* Editor Keyboard / Controls with Spring Motion */}
+      <AnimatePresence>
+        {selectedCell && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 420, damping: 28 }}
+            className="bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-750 p-3 sm:p-3.5 rounded-2xl space-y-3 shadow-sm"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
+              <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
+                {selectedCell.s === -1 ? `Acorde Columna #${selectedCell.c + 1}` : `Cuerda ${STRINGS[selectedCell.s]} · Posición #${selectedCell.c + 1}`}
               </span>
-              <button
-                onClick={() => setSelectedCell(null)}
-                className="text-[10px] font-black uppercase px-2 py-0.5 border border-black hover:bg-zinc-100 cursor-pointer text-black"
-              >
-                Listo
-              </button>
-            </div>
-          </div>
-
-          {/* Chord labels editor keyboard */}
-          {selectedCell.s === -1 ? (
-            <div className="space-y-3">
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={currentValue}
-                  onChange={e => handleUpdateValue(e.target.value)}
-                  placeholder="Escribir acorde..."
-                  className="flex-1 px-2.5 py-1 text-xs border-2 border-black font-bold focus:outline-none focus:bg-yellow-50 text-black"
-                />
-                <button
-                  onClick={() => handleUpdateValue("")}
-                  className="px-3 py-1 bg-red-100 text-red-600 border border-red-300 text-xs font-semibold hover:bg-red-200 cursor-pointer"
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 px-2 py-0.5 rounded-md">
+                  {currentValue === "-" ? "vacío (-)" : currentValue || "ninguno"}
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => setSelectedCell(null)}
+                  className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer"
                 >
-                  Limpiar
-                </button>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
-                  Acordes rápidos:
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {["C", "G", "D", "Am", "Em", "F", "A", "Bm", "Cadd9", "G/B", "D/F#", "Em7"].map(ac => (
-                    <button
-                      key={ac}
-                      type="button"
-                      onClick={() => handleUpdateValue(ac)}
-                      className="px-2 py-1 bg-zinc-50 border border-zinc-300 text-xs font-bold text-zinc-700 hover:bg-zinc-100 hover:border-black rounded cursor-pointer transition-all"
-                    >
-                      {ac}
-                    </button>
-                  ))}
-                </div>
+                  Listo
+                </motion.button>
               </div>
             </div>
-          ) : (
-            /* String Frets editor keyboard */
-            <div className="space-y-3 font-mono">
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
-                    Traste / Fretboard:
-                  </span>
-                  <button
-                    onClick={() => handleUpdateValue("-")}
-                    className="text-[9px] text-red-600 font-bold hover:underline cursor-pointer"
+
+            {/* Chord labels editor keyboard */}
+            {selectedCell.s === -1 ? (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={currentValue}
+                    onChange={e => handleUpdateValue(e.target.value)}
+                    placeholder="Escribir acorde..."
+                    className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 font-bold focus:outline-none focus:ring-2 focus:ring-amber-400/40 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+                  />
+                  <motion.button
+                    whileTap={{ scale: 0.90 }}
+                    onClick={() => handleUpdateValue("")}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 rounded-xl text-xs font-bold cursor-pointer"
                   >
-                    Borrar nota
-                  </button>
+                    Borrar
+                  </motion.button>
                 </div>
-                <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
-                  {FRETS.map(f => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => handlePressFret(f)}
-                      className="py-1.5 text-center font-black text-xs bg-zinc-100 border border-black hover:bg-yellow-300 rounded cursor-pointer transition-colors text-black"
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
-                  Adornos / Técnicas:
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-6 gap-1.5">
-                  {TECHNIQUES.map(tech => (
-                    <button
-                      key={tech.symbol}
-                      type="button"
-                      onClick={() => handlePressTechnique(tech.symbol)}
-                      disabled={tech.symbol !== "x" && (!currentValue || currentValue === "-")}
-                      className="py-1 px-1.5 border border-zinc-400 font-bold text-[10px] text-zinc-700 hover:bg-zinc-100 disabled:opacity-30 disabled:pointer-events-none rounded cursor-pointer flex items-center justify-center gap-1"
-                    >
-                      <span className="text-black font-black text-xs">{tech.label}</span>
-                      <span className="text-zinc-400 font-normal scale-90">({tech.desc})</span>
-                    </button>
-                  ))}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                    Acordes rápidos:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["C", "G", "D", "Am", "Em", "F", "A", "Bm", "Cadd9", "G/B", "D/F#", "Em7"].map(ac => (
+                      <motion.button
+                        key={ac}
+                        whileHover={{ scale: 1.08 }}
+                        whileTap={{ scale: 0.90 }}
+                        type="button"
+                        onClick={() => handleUpdateValue(ac)}
+                        className="px-2.5 py-1 bg-zinc-100 hover:bg-amber-100 dark:bg-zinc-800 dark:hover:bg-amber-950/50 text-xs font-bold text-zinc-800 dark:text-zinc-200 rounded-xl cursor-pointer transition-colors border border-zinc-200 dark:border-zinc-700"
+                      >
+                        {ac}
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        isEditing && (
-          <div className="text-center py-2 text-zinc-500 text-[11px] font-semibold animate-fade-in">
-            💡 Toca cualquier celda de cuerda o acorde arriba para colocar trastes y notas.
-          </div>
-        )
-      )}
+            ) : (
+              /* String Frets editor keyboard with ALL frets 0-24 including 6, 8, 11, 13 */
+              <div className="space-y-3 font-mono">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                      Traste / Fretboard (0-24):
+                    </span>
+                    <button
+                      onClick={() => handleUpdateValue("-")}
+                      className="text-[10px] text-rose-500 font-bold hover:underline cursor-pointer"
+                    >
+                      Borrar nota (-)
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-6 sm:grid-cols-12 md:grid-cols-13 gap-1.5">
+                    {FRETS.map(f => (
+                      <motion.button
+                        key={f}
+                        whileHover={{ scale: 1.12 }}
+                        whileTap={{ scale: 0.88 }}
+                        type="button"
+                        onClick={() => handlePressFret(f)}
+                        className="py-1.5 text-center font-extrabold text-xs bg-zinc-100 hover:bg-amber-200 dark:bg-zinc-800 dark:hover:bg-amber-950/60 rounded-xl cursor-pointer transition-colors text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700"
+                      >
+                        {f}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
 
-      {/* Grid Width & Repeat Controls */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                    Adornos / Técnicas:
+                  </span>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                    {TECHNIQUES.map(tech => (
+                      <motion.button
+                        key={tech.symbol}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.90 }}
+                        type="button"
+                        onClick={() => handlePressTechnique(tech.symbol)}
+                        disabled={tech.symbol !== "x" && (!currentValue || currentValue === "-")}
+                        className="py-1.5 px-2 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-[11px] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                      >
+                        <span className="text-zinc-900 dark:text-zinc-100 font-extrabold text-xs">{tech.label}</span>
+                        <span className="text-zinc-400 font-normal scale-90">({tech.desc})</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Grid Width & Repeat Controls with Spring Motion */}
       {isEditing && (
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t-2 border-zinc-200 animate-fade-in">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800"
+        >
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase text-zinc-500">
+            <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
               Columnas:
             </span>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.88 }}
               onClick={handleRemoveColumns}
               disabled={colCount <= 8}
-              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-150 disabled:opacity-40 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[15px] text-black font-bold"
+              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 rounded-xl cursor-pointer shadow-2xs text-xs font-bold text-zinc-900 dark:text-zinc-100"
             >
               -8
-            </button>
-            <span className="font-mono text-xs font-black text-black bg-zinc-100 border border-black px-2 py-1">
+            </motion.button>
+            <span className="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-lg">
               {colCount} cols
             </span>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.88 }}
               onClick={handleAddColumns}
-              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-150 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[15px] text-black font-bold"
+              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-xl cursor-pointer shadow-2xs text-xs font-bold text-zinc-900 dark:text-zinc-100"
             >
               +8
-            </button>
+            </motion.button>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase text-zinc-500">
+            <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
               Repeticiones:
             </span>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.88 }}
               onClick={() => pushToHistoryAndUpdate(columns, Math.max(1, repeats - 1), chords)}
-              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-bold text-sm text-black"
+              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-xl cursor-pointer shadow-2xs font-bold text-sm text-zinc-900 dark:text-zinc-100"
             >
               -
-            </button>
-            <span className="font-mono text-sm font-black w-8 text-center text-black">
+            </motion.button>
+            <span className="font-mono text-xs font-bold w-8 text-center text-zinc-900 dark:text-zinc-100">
               {repeats}×
             </span>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.88 }}
               onClick={() => pushToHistoryAndUpdate(columns, repeats + 1, chords)}
-              className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black hover:bg-zinc-200 rounded cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-bold text-sm text-black"
+              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-xl cursor-pointer shadow-2xs font-bold text-sm text-zinc-900 dark:text-zinc-100"
             >
               +
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

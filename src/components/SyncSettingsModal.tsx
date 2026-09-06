@@ -1,5 +1,6 @@
 import React from 'react';
-import { Cloud, X, Save, HelpCircle, ExternalLink, Check, Clipboard } from 'lucide-react';
+import { Cloud, X, Save, HelpCircle, ExternalLink, Check, Copy, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface SyncSettingsModalProps {
   webAppUrl: string;
@@ -28,37 +29,61 @@ export const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
-      <div className="bg-white border-4 border-black w-full max-w-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative flex flex-col max-h-[90vh]">
-        
-        {/* Header */}
-        <div className="bg-black text-white p-4 flex justify-between items-center select-none grow-0 shrink-0">
-          <div className="flex items-center gap-2">
-            <Cloud className="w-5 h-5 text-yellow-300" />
-            <h3 className="font-black text-sm uppercase tracking-widest text-white">
-              Sincronización de Nube (Excel)
-            </h3>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none"
+    >
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0, y: 16 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0, y: 16 }}
+        transition={{ type: "spring", damping: 26, stiffness: 360 }}
+        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-2xl rounded-3xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden text-zinc-900 dark:text-zinc-100"
+      >
+        {/* Pixel 10 Material You Header */}
+        <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/70 dark:bg-zinc-850/60 grow-0 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-amber-400/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-2xs">
+              <Cloud className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm tracking-tight text-zinc-900 dark:text-white">
+                Sincronización Cloud (Google Sheets)
+              </h3>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+                Respaldo de canciones, acordes, tabs y capo en tu hoja de cálculo
+              </p>
+            </div>
           </div>
-          <button
+          <motion.button
+            whileTap={{ scale: 0.88 }}
             onClick={onClose}
-            className="p-1 text-white hover:text-yellow-300 transition-colors cursor-pointer border-2 border-transparent hover:border-white"
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer transition-colors"
           >
-            <X className="w-5 h-5" />
-          </button>
+            <X className="w-4 h-4" />
+          </motion.button>
         </div>
 
-        {/* Content */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1 select-text">
-          <div className="space-y-2">
-            <p className="text-xs text-zinc-500 font-bold leading-relaxed">
-              Vincula tu cuenta de Google Sheets utilizando Google Apps Script para guardar de manera segura tus acordes y tabs en la nube, ¡y acceder a ellos en cualquier dispositivo!
+        {/* Content Body */}
+        <div className="p-5 overflow-y-auto space-y-4 flex-1 select-text">
+          
+          {/* Important Notice regarding Capo & Apps Script update */}
+          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>¿El capo no se guarda o ya usabas la hoja antes?</span>
+            </div>
+            <p className="leading-relaxed text-[11px] text-amber-900/90 dark:text-amber-200/90">
+              <strong>Sí, debes actualizar el código de tu Google Apps Script</strong>. La versión anterior de la hoja no tenía la columna para <em>Capo</em> ni <em>Afinación</em>. Copia el código actualizado de abajo, pégalo en tu Apps Script y haz clic en <strong>Implementar &gt; Administrar implementaciones &gt; Editar &gt; Versión: Nueva versión</strong>.
             </p>
           </div>
 
-          {/* Form */}
-          <div className="border-3 border-black p-3 bg-yellow-50 space-y-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-            <label className="block text-[10px] font-black uppercase text-black tracking-wide">
-              URL de Google Web App Script:
+          {/* Web App URL Form */}
+          <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/80 space-y-2 shadow-inner">
+            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              URL de la Aplicación Web (Google Apps Script):
             </label>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
@@ -66,122 +91,126 @@ export const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 placeholder="https://script.google.com/macros/s/.../exec"
-                className="flex-1 px-3 py-2 text-xs font-bold border-2 border-black bg-white focus:outline-none focus:bg-yellow-100 font-mono text-black"
+                className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50 shadow-2xs"
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSave}
-                className="px-4 py-2 bg-black text-white hover:bg-zinc-800 text-xs font-black uppercase tracking-wide cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
+                className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold text-xs rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs transition-colors"
               >
-                <Save className="w-3.5 h-3.5 text-yellow-300" />
-                <span>Guardar</span>
-              </button>
+                <Save className="w-3.5 h-3.5" />
+                <span>Guardar URL</span>
+              </motion.button>
             </div>
           </div>
 
-          {/* Guide Accordion */}
-          <div className="border-2 border-black">
+          {/* Step by step Accordion Guide */}
+          <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-2xs">
             <button
               onClick={() => setShowGuide(!showGuide)}
-              className="w-full bg-zinc-100 p-3 flex justify-between items-center text-xs font-black uppercase tracking-wide text-black hover:bg-zinc-200 border-b-2 border-black cursor-pointer"
+              className="w-full bg-zinc-50 dark:bg-zinc-800/60 p-3.5 flex justify-between items-center text-xs font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
             >
-              <span className="flex items-center gap-1.5">
-                <HelpCircle className="w-4 h-4 text-black" />
-                ¿Cómo funciona? Guía paso a paso
+              <span className="flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-amber-500" />
+                <span>Guía: Cómo configurar y actualizar Google Apps Script</span>
               </span>
-              <span>{showGuide ? "Ocultar" : "Ver"}</span>
+              <span className="text-[11px] text-zinc-500 font-semibold">{showGuide ? "Ocultar detalles" : "Ver pasos"}</span>
             </button>
 
-            {showGuide && (
-              <div className="p-4 bg-white text-xs text-zinc-700 leading-relaxed space-y-3 font-semibold select-text">
-                <ol className="list-decimal pl-5 space-y-2 text-[11px] text-zinc-650">
-                  <li>
-                    Crea una planilla nueva o vacía en
-                    <a
-                      href="https://sheets.google.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-1 text-black font-black underline inline-flex items-center gap-0.5"
-                    >
-                      Google Sheets <ExternalLink className="w-2.5 h-2.5 inline" />
-                    </a>
-                    .
-                  </li>
-                  <li>
-                    Haz clic en <strong className="text-black">Extensiones &gt; Apps Script</strong> en el menú superior.
-                  </li>
-                  <li>
-                    Borra todo el código predeterminado que aparezca y pega el script de abajo.
-                  </li>
-                  <li>
-                    Haz clic en <strong className="text-black">Implementar &gt; Nueva implementación</strong> (botón azul).
-                  </li>
-                  <li>
-                    Haz clic en el icono del engranaje y elige <strong className="text-black">Aplicación web</strong>.
-                  </li>
-                  <li>
-                    Configura:
-                    <ul className="list-disc pl-4 mt-1 space-y-1">
-                      <li>
-                        <strong>Ejecutar como:</strong> Tu usuario (tu correo principal).
-                      </li>
-                      <li>
-                        <strong>Quién tiene acceso:</strong> <strong className="text-yellow-600">Cualquiera</strong> (requerido para que la app pueda conectar).
-                      </li>
-                    </ul>
-                  </li>
-                  <li>
-                    Haz clic en <strong className="text-black">Implementar</strong>, autoriza los accesos de Google y copia la <strong className="text-black">URL de aplicación web</strong> generada.
-                  </li>
-                  <li>
-                    Pega la URL arriba y haz clic en Guardar de la app. ¡Listo para sincronizar!
-                  </li>
-                </ol>
+            <AnimatePresence>
+              {showGuide && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-4 bg-white dark:bg-zinc-850 text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed space-y-3 font-medium select-text border-t border-zinc-100 dark:border-zinc-800"
+                >
+                  <ol className="list-decimal pl-5 space-y-2 text-[11px]">
+                    <li>
+                      Abre tu hoja de cálculo en
+                      <a
+                        href="https://sheets.google.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-1 text-amber-600 dark:text-amber-400 font-bold underline inline-flex items-center gap-0.5"
+                      >
+                        Google Sheets <ExternalLink className="w-2.5 h-2.5 inline" />
+                      </a>
+                      .
+                    </li>
+                    <li>
+                      Haz clic en <strong className="text-zinc-900 dark:text-white">Extensiones &gt; Apps Script</strong> en el menú superior de Google Sheets.
+                    </li>
+                    <li>
+                      Selecciona todo el código existente y <strong>reemplázalo con el código actualizado</strong> que tienes en la caja de abajo (utiliza el botón "Copiar Código").
+                    </li>
+                    <li>
+                      Guarda los cambios en el editor de Apps Script (icono de disco 💾 o <kbd className="font-mono bg-zinc-100 dark:bg-zinc-700 px-1 py-0.5 rounded">Ctrl + S</kbd>).
+                    </li>
+                    <li>
+                      <strong className="text-amber-600 dark:text-amber-400">Paso crucial para que tome los cambios:</strong>
+                      <div className="mt-1 pl-2 border-l-2 border-amber-400 space-y-1">
+                        <p>• Si es la <strong>primera vez</strong>: Haz clic en <strong>Implementar &gt; Nueva implementación</strong>, tipo <strong>Aplicación web</strong>, ejecutar como <em>Tu cuenta</em>, acceso: <em>Cualquiera</em>.</p>
+                        <p>• Si <strong>ya lo tenías implementado</strong>: Haz clic en <strong>Implementar &gt; Administrar implementaciones</strong>, haz clic en el icono del lápiz ✏️ (Editar), en <em>Versión</em> selecciona <strong>Nueva versión</strong> y haz clic en <strong>Implementar</strong>.</p>
+                      </div>
+                    </li>
+                    <li>
+                      Copia la <strong>URL de la aplicación web</strong> que te entrega Google y pégala en el campo de arriba.
+                    </li>
+                  </ol>
 
-                {/* Code Block */}
-                <div className="space-y-2 mt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider">
-                      Código Apps Script para pegar:
-                    </span>
-                    <button
-                      onClick={handleCopy}
-                      className="px-3 py-1 bg-zinc-100 hover:bg-black hover:text-white border-2 border-black text-[10px] font-black uppercase tracking-wider cursor-pointer inline-flex items-center gap-1 transition-colors"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-green-500" />
-                          <span>¡Copiado!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clipboard className="w-3.5 h-3.5" />
-                          <span>Copiar Código</span>
-                        </>
-                      )}
-                    </button>
+                  {/* Code snippet block */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Código Apps Script v2 (con soporte para Capo y Afinación):
+                      </span>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleCopy}
+                        className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors border border-zinc-200 dark:border-zinc-700"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-emerald-600 dark:text-emerald-400">¡Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Copiar Código</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
+
+                    <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-950 text-zinc-300 font-mono text-[10px] overflow-x-auto max-h-52 overflow-y-auto leading-normal">
+                      <pre className="select-text whitespace-pre">
+                        {APPS_SCRIPT_TEMPLATE}
+                      </pre>
+                    </div>
                   </div>
-                  <div className="border-2 border-zinc-300 p-2.5 bg-zinc-50 font-mono text-[9px] text-zinc-650 overflow-x-auto max-h-48 overflow-y-auto">
-                    <pre className="select-text whitespace-pre">
-                      {APPS_SCRIPT_TEMPLATE}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
         </div>
 
         {/* Footer actions */}
-        <div className="border-t-3 border-black p-3.5 flex justify-end bg-zinc-100 grow-0 shrink-0 select-none">
-          <button
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-3.5 flex justify-end bg-zinc-50/70 dark:bg-zinc-850/60 grow-0 shrink-0 select-none">
+          <motion.button
+            whileTap={{ scale: 0.94 }}
             onClick={onClose}
-            className="px-4 py-2 border-2 border-black bg-white hover:bg-zinc-100 text-xs font-black uppercase cursor-pointer text-black"
+            className="px-4 py-2 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-bold cursor-pointer text-zinc-800 dark:text-zinc-200 transition-colors"
           >
             Cerrar
-          </button>
+          </motion.button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -194,25 +223,33 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     
     // Auto-migrate or initialize sheet to 8-column structure (including Capo and Tuning)
-    if (sheet.getLastRow() === 0) {
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    var headers = lastRow > 0 ? sheet.getRange(1, 1, 1, Math.max(8, lastCol)).getValues()[0] : [];
+    
+    var hasCapoCol = false;
+    for (var h = 0; h < headers.length; h++) {
+      if (String(headers[h]).trim().toLowerCase() === "capo") {
+        hasCapoCol = true;
+        break;
+      }
+    }
+    
+    if (lastRow === 0) {
       sheet.appendRow(["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización"]);
       sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#FFFBEB");
-    } else if (sheet.getLastColumn() > 0 && sheet.getLastColumn() < 8) {
+    } else if (!hasCapoCol || lastCol < 8) {
       // Migrate old sheet structures (4-column or 6-column) to 8-column sheet
-      var lastRow = sheet.getLastRow();
-      var lastCol = sheet.getLastColumn();
-      
-      // 1. Get existing data
       var oldData = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
       
-      // 2. Clear old columns
-      sheet.getRange(1, 1, lastRow, lastCol).clearContent();
+      // Clear old range
+      sheet.getRange(1, 1, lastRow, Math.max(8, lastCol)).clearContent();
       
-      // 3. Set new headers
+      // Set new headers
       sheet.getRange(1, 1, 1, 8).setValues([["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización"]]);
       sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#FFFBEB");
       
-      // 4. Re-insert migrated data
+      // Re-insert migrated data
       if (oldData.length > 0) {
         var migratedData = [];
         for (var m = 0; m < oldData.length; m++) {
@@ -225,17 +262,18 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
           var tuning = "Estándar";
           var updatedDate = 0;
           
-          if (lastCol === 4) {
-            // Old 4-column structure
-            updatedDate = oldData[m][3];
+          if (lastCol <= 4) {
+            updatedDate = oldData[m][3] || 0;
           } else if (lastCol === 6) {
-            // Old 6-column structure
             lyrics = oldData[m][3] || "";
             scrollSpeed = oldData[m][4] !== undefined ? Number(oldData[m][4]) : 0;
-            updatedDate = oldData[m][5];
+            updatedDate = oldData[m][5] || 0;
           } else {
-            // Fallback
-            updatedDate = oldData[m][oldData[m].length - 1];
+            lyrics = oldData[m][3] || "";
+            scrollSpeed = oldData[m][4] !== undefined ? Number(oldData[m][4]) : 0;
+            capo = oldData[m][5] !== undefined ? Number(oldData[m][5]) : 0;
+            tuning = oldData[m][6] || "Estándar";
+            updatedDate = oldData[m][7] || 0;
           }
           
           migratedData.push([
@@ -275,7 +313,7 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
           sheet.getRange(existingRow, 3).setValue(valSong.sectionsJson);
           sheet.getRange(existingRow, 4).setValue(valSong.lyrics || "");
           sheet.getRange(existingRow, 5).setValue(valSong.scrollSpeed || 0);
-          sheet.getRange(existingRow, 6).setValue(valSong.capo || 0);
+          sheet.getRange(existingRow, 6).setValue(valSong.capo !== undefined ? Number(valSong.capo) : 0);
           sheet.getRange(existingRow, 7).setValue(valSong.tuning || "Estándar");
           sheet.getRange(existingRow, 8).setValue(valSong.updatedDate);
         }
@@ -286,7 +324,7 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
           valSong.sectionsJson, 
           valSong.lyrics || "", 
           valSong.scrollSpeed || 0, 
-          valSong.capo || 0,
+          valSong.capo !== undefined ? Number(valSong.capo) : 0,
           valSong.tuning || "Estándar",
           valSong.updatedDate
         ]);
