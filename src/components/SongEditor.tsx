@@ -3,7 +3,7 @@ import {
   ArrowLeft, Loader2, Trash2, ChevronUp, ChevronDown, 
   Copy, AlertTriangle, Plus, FileText, Music, Guitar,
   Play, Pause, Sparkles, Check, Edit3, Settings2, X, Star,
-  GitBranch, CheckCircle2, ChevronLeft, ChevronRight, Layers, Sliders
+  GitBranch, CheckCircle2, ChevronLeft, ChevronRight, Layers, Sliders, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Song, Section, SongVersion } from '../types';
@@ -156,6 +156,10 @@ export const SongEditor: React.FC<SongEditorProps> = ({
   const [editingSectionIdx, setEditingSectionIdx] = React.useState<number | null>(null);
   const [editSectionName, setEditSectionName] = React.useState<string>("");
   const [editSectionType, setEditSectionType] = React.useState<'chords' | 'tab'>('chords');
+
+  // States for Clean View vs Edit Mode
+  const [isGlobalEditMode, setIsGlobalEditMode] = React.useState(false);
+  const [sectionInEditMode, setSectionInEditMode] = React.useState<number | null>(null);
 
   // States for Lyrics & Autoscroll
   const [showLyricsPanel, setShowLyricsPanel] = React.useState(false);
@@ -1172,139 +1176,272 @@ export const SongEditor: React.FC<SongEditorProps> = ({
         )}
       </div>
 
+      {/* Sections Header Bar with View Mode Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white/90 dark:bg-zinc-850/90 border border-zinc-200/80 dark:border-zinc-800 px-3.5 py-2.5 rounded-2xl shadow-xs select-none">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-black uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+            Secciones ({currentSections.length})
+          </span>
+          {!isGlobalEditMode && sectionInEditMode === null ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Vista Limpia
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Modo Edición Activo
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          {/* Quick Add Section Button */}
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.94 }}
+            type="button"
+            onClick={() => {
+              setAddSectionStep('name');
+              setShowAddSectionModal(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1 cursor-pointer border border-zinc-200 dark:border-zinc-700 transition-colors shadow-2xs"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5] text-amber-500" />
+            <span className="hidden sm:inline">Nueva Sección</span>
+          </motion.button>
+
+          {/* Clean View vs Edit Mode Segmented Switch */}
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                setIsGlobalEditMode(false);
+                setSectionInEditMode(null);
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                !isGlobalEditMode && sectionInEditMode === null
+                  ? "bg-white dark:bg-zinc-700 text-zinc-950 dark:text-white shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+              title="Vista limpia: solo lectura para tocar en vivo sin estorbos"
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-500" />
+              <span>Vista Limpia</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsGlobalEditMode(true);
+                setSectionInEditMode(null);
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isGlobalEditMode
+                  ? "bg-amber-400 text-zinc-950 shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+              title="Modo edición: permite mover acordes, cambiar pulsos y agregar líneas"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Modo Edición</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Sections List */}
       <div className="space-y-4">
-        {currentSections.map((sec, idx) => (
-          <motion.div
-            key={idx}
-            layout
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="space-y-2 bg-white/90 dark:bg-zinc-850/90 border border-zinc-200/80 dark:border-zinc-800 p-3 sm:p-4 rounded-3xl shadow-xs"
-          >
-            {/* Section Header Controls */}
-            <div className="flex justify-between items-center border-b border-zinc-200 pb-2 px-1 select-none">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-amber-400/20 text-amber-500 flex items-center justify-center font-black text-xs shrink-0">
-                  {idx + 1}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleOpenEditSection(idx)}
-                  className="font-extrabold text-xs sm:text-sm text-zinc-900 flex items-center gap-1.5 hover:text-amber-600 transition-colors cursor-pointer group text-left"
-                  title="Toca para cambiar nombre o tipo (Intro, Coro, Puente, etc.)"
-                >
-                  <span>{sec.name}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 uppercase group-hover:bg-amber-100 group-hover:text-amber-900 group-hover:border-amber-300 transition-colors">
-                    {sec.type === "chords" ? "Acordes" : "Tablatura"}
+        {currentSections.map((sec, idx) => {
+          const isSectionEditing = isGlobalEditMode || sectionInEditMode === idx;
+
+          return (
+            <motion.div
+              key={idx}
+              layout
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className={`space-y-2 bg-white/90 dark:bg-zinc-850/90 border p-3 sm:p-4 rounded-3xl shadow-xs transition-colors ${
+                isSectionEditing 
+                  ? "border-amber-300/80 dark:border-amber-600/40 ring-1 ring-amber-400/20" 
+                  : "border-zinc-200/80 dark:border-zinc-800"
+              }`}
+            >
+              {/* Section Header */}
+              <div className="flex justify-between items-center border-b border-zinc-200/80 dark:border-zinc-800 pb-2 px-1 select-none">
+                <div className="flex items-center gap-2">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+                    isSectionEditing 
+                      ? "bg-amber-400 text-zinc-950" 
+                      : "bg-amber-400/20 text-amber-600 dark:text-amber-400"
+                  }`}>
+                    {idx + 1}
                   </span>
-                  <Edit3 className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isSectionEditing) {
+                        handleOpenEditSection(idx);
+                      } else {
+                        setSectionInEditMode(idx);
+                      }
+                    }}
+                    className="font-extrabold text-xs sm:text-sm text-zinc-900 dark:text-white flex items-center gap-1.5 hover:text-amber-600 transition-colors cursor-pointer group text-left"
+                    title={isSectionEditing ? "Toca para cambiar nombre o formato" : "Toca para editar esta sección"}
+                  >
+                    <span>{sec.name}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 uppercase group-hover:bg-amber-100 group-hover:text-amber-900 group-hover:border-amber-300 transition-colors">
+                      {sec.type === "chords" ? "Acordes" : "Tablatura"}
+                    </span>
+                    {isSectionEditing && (
+                      <Edit3 className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Action Buttons: Clean button vs Full editing controls */}
+                <div className="flex items-center gap-1">
+                  {!isSectionEditing ? (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.92 }}
+                      type="button"
+                      title="Editar esta sección"
+                      onClick={() => setSectionInEditMode(idx)}
+                      className="px-3 py-1.5 rounded-xl flex items-center gap-1.5 bg-zinc-100 hover:bg-amber-100 dark:bg-zinc-800 dark:hover:bg-amber-950/40 text-zinc-800 hover:text-amber-900 dark:text-zinc-200 dark:hover:text-amber-300 text-xs font-bold cursor-pointer transition-colors border border-zinc-200 dark:border-zinc-700 shadow-2xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Editar</span>
+                    </motion.button>
+                  ) : (
+                    <>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        type="button"
+                        title="Cambiar categoría (Intro, Coro...) o formato"
+                        onClick={() => handleOpenEditSection(idx)}
+                        className="px-2 py-1 rounded-lg flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-colors border border-zinc-200 dark:border-zinc-700"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="hidden xs:inline">Cambiar</span>
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        type="button"
+                        title="Subir sección"
+                        disabled={idx === 0}
+                        onClick={() => handleMoveSectionUp(idx)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 disabled:opacity-30 cursor-pointer"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        type="button"
+                        title="Bajar sección"
+                        disabled={idx === currentSections.length - 1}
+                        onClick={() => handleMoveSectionDown(idx)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 disabled:opacity-30 cursor-pointer"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        type="button"
+                        title="Duplicar sección"
+                        onClick={() => handleDuplicateSection(idx)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        type="button"
+                        title="Eliminar sección"
+                        onClick={() => handleDeleteSection(idx)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-500 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.88 }}
+                        type="button"
+                        title="Terminar edición de esta sección"
+                        onClick={() => {
+                          if (isGlobalEditMode) {
+                            setIsGlobalEditMode(false);
+                          }
+                          setSectionInEditMode(null);
+                        }}
+                        className="px-2.5 py-1 rounded-xl flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black cursor-pointer shadow-xs ml-1"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[2.8]" />
+                        <span>Listo</span>
+                      </motion.button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Action Buttons (Change Type/Name, Reorder, Duplicate, Delete) */}
-              <div className="flex items-center gap-1">
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  type="button"
-                  title="Cambiar categoría (Intro, Coro...) o formato"
-                  onClick={() => handleOpenEditSection(idx)}
-                  className="px-2 py-1 rounded-lg flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold cursor-pointer transition-colors border border-zinc-200"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="hidden xs:inline">Cambiar</span>
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  type="button"
-                  title="Subir sección"
-                  disabled={idx === 0}
-                  onClick={() => handleMoveSectionUp(idx)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 disabled:opacity-30 cursor-pointer"
-                >
-                  <ChevronUp className="w-4 h-4" />
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  type="button"
-                  title="Bajar sección"
-                  disabled={idx === currentSections.length - 1}
-                  onClick={() => handleMoveSectionDown(idx)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 disabled:opacity-30 cursor-pointer"
-                >
-                  <ChevronDown className="w-4 h-4" />
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  type="button"
-                  title="Duplicar sección"
-                  onClick={() => handleDuplicateSection(idx)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 cursor-pointer"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  type="button"
-                  title="Eliminar sección"
-                  onClick={() => handleDeleteSection(idx)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-500 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </motion.button>
+              {/* Embedded Section Content */}
+              <div>
+                {sec.type === 'chords' ? (
+                  <ChordSectionEditor
+                    content={sec.content}
+                    allSongs={allSongs}
+                    customChords={customChords}
+                    mainChords={activeVersion.mainChords || song.mainChords || []}
+                    isEditing={isSectionEditing}
+                    onToggleEdit={() => setSectionInEditMode(isSectionEditing ? null : idx)}
+                    onChordClick={(name) => setSelectedChordForDiagram(name)}
+                    tuning={activeVersion.tuning || song.tuning || "Estándar"}
+                    capo={activeVersion.capo ?? 0}
+                    onChange={(newContent) => {
+                      const updated = currentSections.map((s, sIdx) => sIdx === idx ? { ...s, content: newContent } : s);
+                      updateSections(updated);
+                    }}
+                  />
+                ) : (
+                  <TabSectionEditor
+                    content={sec.content}
+                    allSongs={allSongs}
+                    customChords={customChords}
+                    isEditing={isSectionEditing}
+                    onToggleEdit={() => setSectionInEditMode(isSectionEditing ? null : idx)}
+                    onChange={(newContent) => {
+                      const updated = currentSections.map((s, sIdx) => sIdx === idx ? { ...s, content: newContent } : s);
+                      updateSections(updated);
+                    }}
+                  />
+                )}
               </div>
-            </div>
+            </motion.div>
+          );
+        })}
 
-            {/* Embedded Section Editor */}
-            <div>
-              {sec.type === 'chords' ? (
-                <ChordSectionEditor
-                  content={sec.content}
-                  allSongs={allSongs}
-                  customChords={customChords}
-                  mainChords={activeVersion.mainChords || song.mainChords || []}
-                  onChange={(newContent) => {
-                    const updated = currentSections.map((s, sIdx) => sIdx === idx ? { ...s, content: newContent } : s);
-                    updateSections(updated);
-                  }}
-                />
-              ) : (
-                <TabSectionEditor
-                  content={sec.content}
-                  allSongs={allSongs}
-                  customChords={customChords}
-                  onChange={(newContent) => {
-                    const updated = currentSections.map((s, sIdx) => sIdx === idx ? { ...s, content: newContent } : s);
-                    updateSections(updated);
-                  }}
-                />
-              )}
+        {/* Add Section Button CTA - shown in edit mode or when song has 0 sections */}
+        {(isGlobalEditMode || currentSections.length === 0) && (
+          <motion.div
+            whileHover={{ scale: 1.015, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
+            onClick={() => {
+              setAddSectionStep('name');
+              setShowAddSectionModal(true);
+            }}
+            className="p-6 bg-white/70 dark:bg-zinc-850/60 hover:bg-white dark:hover:bg-zinc-850 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-3xl text-center flex flex-col items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors group select-none"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus className="w-6 h-6 stroke-[2.8]" />
             </div>
+            <h5 className="font-extrabold text-xs sm:text-sm text-zinc-800 dark:text-zinc-200">
+              Añadir Sección de Canción
+            </h5>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium max-w-xs">
+              Agrega bloques de acordes organizados o una partitura interactiva de 6 cuerdas.
+            </p>
           </motion.div>
-        ))}
-
-        {/* Add Section Button CTA */}
-        <motion.div
-          whileHover={{ scale: 1.015, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 450, damping: 25 }}
-          onClick={() => {
-            setAddSectionStep('name');
-            setShowAddSectionModal(true);
-          }}
-          className="p-6 bg-white/70 dark:bg-zinc-850/60 hover:bg-white dark:hover:bg-zinc-850 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-3xl text-center flex flex-col items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors group select-none"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Plus className="w-6 h-6 stroke-[2.8]" />
-          </div>
-          <h5 className="font-extrabold text-xs sm:text-sm text-zinc-800 dark:text-zinc-200">
-            Añadir Sección de Canción
-          </h5>
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium max-w-xs">
-            Agrega bloques de acordes organizados o una partitura interactiva de 6 cuerdas.
-          </p>
-        </motion.div>
+        )}
       </div>
 
       {/* Add Section Modal with Spring Motion */}

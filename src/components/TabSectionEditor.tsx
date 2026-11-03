@@ -11,6 +11,8 @@ interface TabSectionEditorProps {
   onChange: (content: string) => void;
   allSongs?: Song[];
   customChords?: Record<string, ChordShape>;
+  isEditing?: boolean;
+  onToggleEdit?: () => void;
 }
 
 const STRINGS = ["e", "B", "G", "D", "A", "E"];
@@ -30,6 +32,8 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
   onChange,
   allSongs = [],
   customChords = {},
+  isEditing: controlledIsEditing,
+  onToggleEdit,
 }) => {
   const commonChords = React.useMemo(() => {
     return getCommonChords(allSongs);
@@ -74,7 +78,19 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
   const chords = Array.isArray(tabData.chords) && tabData.chords.length === colCount ? tabData.chords : Array(colCount).fill("");
 
   const [selectedCell, setSelectedCell] = React.useState<{ s: number; c: number } | null>(null);
-  const [isEditing, setIsEditing] = React.useState(false);
+  const [internalIsEditing, setInternalIsEditing] = React.useState(false);
+  const isEditing = controlledIsEditing !== undefined ? controlledIsEditing : internalIsEditing;
+
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      setSelectedCell(null);
+    }
+    if (onToggleEdit) {
+      onToggleEdit();
+    } else {
+      setInternalIsEditing(prev => !prev);
+    }
+  };
 
   const [isImporting, setIsImporting] = React.useState(false);
   const [importText, setImportText] = React.useState("");
@@ -403,14 +419,7 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.92 }}
             type="button"
-            onClick={() => {
-              setIsEditing(prev => {
-                if (prev) {
-                  setSelectedCell(null);
-                }
-                return !prev;
-              });
-            }}
+            onClick={handleToggleEdit}
             className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-1.5 shadow-2xs ${
               isEditing 
                 ? "bg-amber-400 text-zinc-950 font-extrabold" 

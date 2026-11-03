@@ -1,13 +1,14 @@
 import React from 'react';
 import { 
   Plus, Minus, Trash2, Music, Sparkles, X, Check, 
-  GripVertical, ChevronLeft, ChevronRight, Flame, Star
+  GripVertical, ChevronLeft, ChevronRight, Flame, Star, Edit3, Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChordLine, ChordItem, Song } from '../types';
 import { getCommonChords } from '../utils/chordFrequency';
-import { getGlobalCustomChords, ChordShape } from '../utils/chordShapes';
+import { getGlobalCustomChords, ChordShape, getChordShape } from '../utils/chordShapes';
 import { MiniChordDiagram } from './MiniChordDiagram';
+import { playChordStrum } from '../utils/audio';
 
 interface ChordSectionEditorProps {
   content: string;
@@ -15,6 +16,11 @@ interface ChordSectionEditorProps {
   allSongs?: Song[];
   customChords?: Record<string, ChordShape>;
   mainChords?: string[];
+  isEditing?: boolean;
+  onToggleEdit?: () => void;
+  onChordClick?: (name: string) => void;
+  tuning?: string;
+  capo?: number;
 }
 
 export const CHORD_PRESETS = [
@@ -33,6 +39,11 @@ export const ChordSectionEditor: React.FC<ChordSectionEditorProps> = ({
   allSongs = [],
   customChords = {},
   mainChords = [],
+  isEditing = false,
+  onToggleEdit,
+  onChordClick,
+  tuning = "Estándar",
+  capo = 0,
 }) => {
   let lines: ChordLine[] = [];
   try {
@@ -267,21 +278,163 @@ export const ChordSectionEditor: React.FC<ChordSectionEditorProps> = ({
     setDragOverLine(null);
   };
 
-  return (
-    <div className="bg-zinc-50 border border-zinc-200/90 p-3 sm:p-4 rounded-2xl space-y-3 shadow-2xs font-sans text-zinc-900">
-      
-      {/* Visual helper badge */}
-      {lines.some(l => l.chords.length > 1) && (
-        <div className="flex items-center justify-between px-1 text-[11px] text-zinc-400 select-none">
-          <span className="flex items-center gap-1.5 font-medium">
-            <GripVertical className="w-3.5 h-3.5 text-amber-500" />
-            <span>Arrastra los acordes para cambiar su orden o posición</span>
+  // Clean View (Performance / Reading Mode)
+  if (!isEditing) {
+    const hasAnyChords = lines.some(l => l.chords && l.chords.length > 0);
+
+    return (
+      <div className="bg-white/80 dark:bg-zinc-850/80 border border-zinc-200/80 dark:border-zinc-800 p-3 sm:p-4 rounded-2xl space-y-3 shadow-2xs font-sans text-zinc-900 dark:text-zinc-100">
+        {!hasAnyChords ? (
+          <div className="text-center py-6 px-4 bg-zinc-50/70 dark:bg-zinc-800/40 border border-dashed border-zinc-200 dark:border-zinc-750 rounded-2xl space-y-2">
+            <Music className="w-6 h-6 mx-auto stroke-[1.8] text-zinc-300 dark:text-zinc-600" />
+            <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              Esta sección aún no tiene acordes
+            </p>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">
+              Entra al modo edición para agregar acordes o líneas.
+            </p>
+            {onToggleEdit && (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.94 }}
+                type="button"
+                onClick={onToggleEdit}
+                className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-zinc-950 font-extrabold text-xs cursor-pointer shadow-2xs transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Editar acordes</span>
+              </motion.button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {lines.map((line, lineIdx) => {
+              if (!line.chords || line.chords.length === 0) return null;
+
+              return (
+                <div
+                  key={lineIdx}
+                  className="flex flex-wrap items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-750/70"
+                >
+                  {lines.length > 1 && (
+                    <span className="w-5 h-5 rounded-full bg-zinc-200/70 dark:bg-zinc-700/60 text-zinc-500 dark:text-zinc-400 font-mono text-[9px] font-bold flex items-center justify-center shrink-0">
+                      {lineIdx + 1}
+                    </span>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1">
+                    {line.chords.map((chord, chordIdx) => {
+                      const isCustom = !!globalCustomChords[chord.name];
+
+                      return (
+                        <motion.button
+                          key={chordIdx}
+                          whileHover={{ scale: 1.05, y: -2 }}
+                          whileTap={{ scale: 0.94 }}
+                          transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                          type="button"
+                          onClick={() => {
+                            const shape = getChordShape(chord.name, globalCustomChords, allSongs);
+                            playChordStrum(shape.frets, capo, tuning);
+                            onChordClick?.(chord.name);
+                          }}
+                          title={`Toca para escuchar e inspeccionar ${chord.name}`}
+                          className={`flex flex-col items-center px-2.5 py-1.5 rounded-xl border cursor-pointer select-none transition-all shadow-2xs group ${
+                            isCustom
+                              ? "border-amber-300 dark:border-amber-700/70 bg-amber-50/80 dark:bg-amber-950/30 hover:border-amber-400 hover:shadow-xs"
+                              : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xs"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-serif text-base sm:text-lg font-black text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                              {chord.name}
+                            </span>
+                            {isCustom && (
+                              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500 shrink-0" />
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {chord.beats > 1 ? (
+                              <span className="font-mono text-[8px] font-black text-amber-900 dark:text-amber-200 bg-amber-200/80 dark:bg-amber-900/60 px-1.5 py-0.2 rounded-full">
+                                {chord.beats} pulsos
+                              </span>
+                            ) : (
+                              <span className="font-mono text-[8px] text-zinc-400 dark:text-zinc-500">
+                                1 pulso
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Mini Preview Diagram */}
+                          <div className="mt-1 pt-0.5 border-t border-zinc-200/70 dark:border-zinc-700/60 flex justify-center">
+                            <MiniChordDiagram
+                              chordName={chord.name}
+                              customChords={globalCustomChords}
+                              allSongs={allSongs}
+                              width={32}
+                              height={38}
+                            />
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+
+                  {line.repeat > 1 && (
+                    <span className="font-mono text-[11px] font-black text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800 px-2.5 py-0.5 rounded-full ml-auto shrink-0 shadow-2xs">
+                      ×{line.repeat} repeticiones
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Clean View Bottom Helper */}
+        <div className="flex items-center justify-between pt-1 px-1 text-[11px] text-zinc-400 dark:text-zinc-500 select-none">
+          <span className="flex items-center gap-1">
+            <Volume2 className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span>Toca cualquier acorde para escuchar su sonido o ver diagrama</span>
           </span>
-          <span className="hidden sm:inline text-[10px] text-zinc-400">
-            Toca una línea para editar pulsos
-          </span>
+          {onToggleEdit && (
+            <button
+              type="button"
+              onClick={onToggleEdit}
+              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>Editar</span>
+            </button>
+          )}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Interactive Edit Mode
+  return (
+    <div className="bg-zinc-50 dark:bg-zinc-850 border border-zinc-200/90 dark:border-zinc-800 p-3 sm:p-4 rounded-2xl space-y-3 shadow-2xs font-sans text-zinc-900 dark:text-zinc-100">
+      
+      {/* Edit Mode Top Banner */}
+      <div className="flex items-center justify-between pb-1 border-b border-zinc-200/70 dark:border-zinc-750/70 text-[11px] text-zinc-600 dark:text-zinc-300 select-none">
+        <span className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400">
+          <GripVertical className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <span>Arrastra acordes para reordenar, ajusta pulsos o añade</span>
+        </span>
+        {onToggleEdit && (
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            type="button"
+            onClick={onToggleEdit}
+            className="px-2.5 py-0.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-[11px] flex items-center gap-1 cursor-pointer shadow-xs"
+          >
+            <Check className="w-3 h-3 stroke-[3]" />
+            <span>Listo</span>
+          </motion.button>
+        )}
+      </div>
 
       {lines.length === 0 ? (
         <div className="text-center py-6 text-zinc-400 bg-white border border-dashed border-zinc-300 rounded-2xl p-4 space-y-1">
