@@ -1,3 +1,15 @@
+export interface SongVersion {
+  id: string;
+  name: string; // e.g. "Original", "Capo 3", "Acordes Fáciles", "Afinación Eb"
+  capo: number;
+  tuning: string;
+  sectionsJson: string; // Serialized Section[]
+  isDefault?: boolean; // Whether this is the principal version
+  lyrics?: string;
+  notes?: string;
+  mainChords?: string[]; // Main song chords palette (Acordes Principales)
+}
+
 export interface Song {
   id: number;
   title: string;
@@ -8,6 +20,9 @@ export interface Song {
   lyrics?: string;
   scrollSpeed?: number;
   updatedDate: number;
+  versions?: SongVersion[];
+  defaultVersionId?: string;
+  mainChords?: string[]; // Main song chords palette
 }
 
 export interface Section {

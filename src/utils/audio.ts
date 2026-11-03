@@ -12,10 +12,9 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
-// Low E, A, D, G, B, High E standard frequencies
-const STANDARD_STRING_FREQS = [82.41, 110.00, 146.83, 196.00, 246.94, 329.63];
+import { getTuningInfo } from './tuningUtils';
 
-export function playChordStrum(frets: (number | 'x')[], capo: number = 0) {
+export function playChordStrum(frets: (number | 'x')[], capo: number = 0, tuning: string = "Estándar") {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -24,6 +23,10 @@ export function playChordStrum(frets: (number | 'x')[], capo: number = 0) {
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0.3, now);
     masterGain.connect(ctx.destination);
+    
+    // Obtain string frequencies dynamically for the chosen tuning
+    const tuningInfo = getTuningInfo(tuning);
+    const stringFreqs = tuningInfo.freqs;
     
     let playCount = 0;
     
@@ -38,7 +41,7 @@ export function playChordStrum(frets: (number | 'x')[], capo: number = 0) {
       const delay = playCount * 0.045; // 45ms delay per string
       playCount++;
       
-      const stringBaseFreq = STANDARD_STRING_FREQS[stringIdx];
+      const stringBaseFreq = stringFreqs[stringIdx] || 110;
       // Formula for frequency with fret and capo: f = base * 2 ^ ((fret + capo) / 12)
       const frequency = stringBaseFreq * Math.pow(2, (parsedFret + capo) / 12);
       

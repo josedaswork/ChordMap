@@ -1,14 +1,16 @@
 import React from 'react';
-import { Play, Edit2, Check, X, ChevronLeft, ChevronRight, RotateCcw, Volume2, Sparkles } from 'lucide-react';
+import { Play, Edit2, Check, X, ChevronLeft, ChevronRight, RotateCcw, Volume2, Sparkles, Eraser } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ChordShape, getChordShape } from '../utils/chordShapes';
 import { playChordStrum } from '../utils/audio';
+import { getTuningInfo } from '../utils/tuningUtils';
 
 interface ChordDiagramPopupProps {
   chordName: string;
   allChords: string[];
   customChords: Record<string, ChordShape>;
   capo: number;
+  tuning?: string;
   onClose: () => void;
   onSaveCustomChord: (chord: string, shape: ChordShape) => void;
   onDeleteCustomChord: (chord: string) => void;
@@ -19,6 +21,7 @@ export const ChordDiagramPopup: React.FC<ChordDiagramPopupProps> = ({
   allChords,
   customChords,
   capo,
+  tuning = "Estándar",
   onClose,
   onSaveCustomChord,
   onDeleteCustomChord,
@@ -56,6 +59,10 @@ export const ChordDiagramPopup: React.FC<ChordDiagramPopupProps> = ({
     });
   }, [activeShape, isEditing]);
 
+  const tuningInfo = React.useMemo(() => {
+    return getTuningInfo(tuning);
+  }, [tuning]);
+
   // Handle left/right navigation
   const handlePrev = () => {
     setIsEditing(false);
@@ -67,12 +74,21 @@ export const ChordDiagramPopup: React.FC<ChordDiagramPopupProps> = ({
     setCurrentIdx(prev => (prev === allChords.length - 1 ? 0 : prev + 1));
   };
 
-  // Play strum with quick haptic animation
+  // Play strum with quick haptic animation using song tuning
   const handlePlay = () => {
     const shape = isEditing ? editShape : activeShape;
     setIsPlayingAudio(true);
-    playChordStrum(shape.frets, capo);
+    playChordStrum(shape.frets, capo, tuning);
     setTimeout(() => setIsPlayingAudio(false), 800);
+  };
+
+  // Clear all notes from diagram
+  const handleClearDiagram = () => {
+    setEditShape({
+      frets: ['x', 'x', 'x', 'x', 'x', 'x'],
+      fingers: [0, 0, 0, 0, 0, 0],
+      baseFret: 1,
+    });
   };
 
   // Keyboard controls for carousel and audio
@@ -231,6 +247,9 @@ export const ChordDiagramPopup: React.FC<ChordDiagramPopupProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] px-2 py-0.5 rounded-full font-bold border border-zinc-200 dark:border-zinc-700">
+              {tuningInfo.name}
+            </span>
             {isCustomized && (
               <span className="bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-amber-300 dark:border-amber-700/60">
                 Personalizado
@@ -281,14 +300,14 @@ export const ChordDiagramPopup: React.FC<ChordDiagramPopupProps> = ({
               className={`select-none ${isEditing ? "cursor-crosshair" : ""}`}
               onClick={handleSvgClick}
             >
-              {/* String labels at bottom */}
-              {["E", "A", "D", "G", "B", "e"].map((label, idx) => (
+              {/* String labels at bottom with active tuning notes */}
+              {tuningInfo.labels.map((label, idx) => (
                 <text
                   key={idx}
                   x={xStart + idx * xSpacing}
                   y={height - 6}
                   textAnchor="middle"
-                  className="font-mono text-[10px] font-bold fill-zinc-400 dark:fill-zinc-500"
+                  className="font-mono text-[10px] font-bold fill-zinc-500 dark:fill-zinc-400"
                 >
                   {label}
                 </text>
@@ -552,14 +571,25 @@ export const ChordDiagramPopup: React.FC<ChordDiagramPopupProps> = ({
             ) : (
               /* Edit Mode controls */
               <div className="space-y-2">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handlePlay}
-                  className="w-full py-2.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-bold text-xs cursor-pointer inline-flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Volume2 className="w-4 h-4" />
-                  <span>Probar Sonido</span>
-                </motion.button>
+                <div className="flex gap-2">
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handlePlay}
+                    className="flex-1 py-2.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-bold text-xs cursor-pointer inline-flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    <span>Probar Sonido</span>
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleClearDiagram}
+                    className="py-2.5 px-3 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold text-xs cursor-pointer inline-flex items-center justify-center gap-1.5 transition-colors"
+                    title="Limpiar todas las notas del diagrama a posición muda"
+                  >
+                    <Eraser className="w-4 h-4" />
+                    <span>Limpiar</span>
+                  </motion.button>
+                </div>
 
                 <div className="flex gap-2">
                   <motion.button

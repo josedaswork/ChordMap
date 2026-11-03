@@ -1,10 +1,12 @@
 import React from 'react';
-import { Database, Sparkles } from 'lucide-react';
+import { Database, Sparkles, FileSpreadsheet, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Song } from './types';
+import { Song, Section } from './types';
+import { ensureSongVersions, getPrincipalVersion, parseCloudVersions } from './utils/versionUtils';
 import { SongList } from './components/SongList';
 import { SongEditor } from './components/SongEditor';
 import { SyncSettingsModal } from './components/SyncSettingsModal';
+import { NewSongModal } from './components/NewSongModal';
 
 const He = {
   getItem(key: string): string | null {
@@ -31,7 +33,9 @@ export default function App() {
   const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const [syncUrl, setSyncUrl] = React.useState("");
+  const [sheetUrl, setSheetUrl] = React.useState("");
   const [showSyncModal, setShowSyncModal] = React.useState(false);
+  const [showNewSongModal, setShowNewSongModal] = React.useState(false);
   const [syncStatus, setSyncStatus] = React.useState<"idle" | "loading" | "success" | "error">("idle");
   const [syncMessage, setSyncMessage] = React.useState("");
 
@@ -40,6 +44,11 @@ export default function App() {
     const savedUrl = He.getItem("chordmap_sync_url") || He.getItem("uno_sync_url");
     if (savedUrl) {
       setSyncUrl(savedUrl);
+    }
+
+    const savedSheetUrl = He.getItem("chordmap_sheet_url") || "";
+    if (savedSheetUrl) {
+      setSheetUrl(savedSheetUrl);
     }
 
     const savedSongs = He.getItem("chordmap_songs") || He.getItem("uno_songs");
@@ -57,6 +66,76 @@ export default function App() {
       }
     } else {
       // Default demo songs
+      const wywhSections = JSON.stringify([
+        {
+          name: "Intro Riff",
+          type: "tab",
+          content: JSON.stringify({
+            tab: [
+              ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+              ["-", "-", "-", "3", "-", "-", "-", "3", "-", "-", "-", "3", "-", "-", "-", "-"],
+              ["-", "-", "0", "-", "0", "-", "-", "0", "-", "-", "-", "0", "-", "-", "-", "-"],
+              ["-", "2", "-", "-", "-", "2", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+              ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+              ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]
+            ],
+            repeat: 2,
+            chords: ["", "G", "", "", "", "C", "", "", "", "G", "", "", "", "C", "", ""]
+          })
+        },
+        {
+          name: "Coro",
+          type: "chords",
+          content: JSON.stringify([
+            {
+              chords: [{ name: "C", beats: 4 }, { name: "D", beats: 4 }],
+              repeat: 1
+            },
+            {
+              chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }],
+              repeat: 1
+            },
+            {
+              chords: [{ name: "D", beats: 4 }, { name: "C", beats: 4 }],
+              repeat: 1
+            },
+            {
+              chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 8 }],
+              repeat: 1
+            }
+          ])
+        }
+      ]);
+
+      const lbSections = JSON.stringify([
+        {
+          name: "Puente Riff",
+          type: "tab",
+          content: JSON.stringify({
+            tab: [
+              ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+              ["-", "-", "-", "1", "3", "1", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+              ["-", "-", "2", "-", "-", "-", "2", "0", "-", "-", "-", "0", "-", "-", "-", "-"],
+              ["-", "3", "-", "-", "-", "-", "-", "-", "2", "3", "2", "-", "-", "-", "-", "-"],
+              ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "3", "-", "-", "-", "-"],
+              ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]
+            ],
+            repeat: 1,
+            chords: ["", "", "C", "", "F", "", "", "G", "", "", "C", "", "F", "", "G", ""]
+          })
+        },
+        {
+          name: "Verso",
+          type: "chords",
+          content: JSON.stringify([
+            {
+              chords: [{ name: "C", beats: 2 }, { name: "F", beats: 2 }, { name: "G", beats: 4 }],
+              repeat: 4
+            }
+          ])
+        }
+      ]);
+
       const defaultSongs: Song[] = [
         {
           id: 17189100,
@@ -64,47 +143,27 @@ export default function App() {
           artist: "Pink Floyd",
           capo: 0,
           tuning: "Estándar",
-          sectionsJson: JSON.stringify([
+          sectionsJson: wywhSections,
+          updatedDate: 17189100,
+          versions: [
             {
-              name: "Intro Riff",
-              type: "tab",
-              content: JSON.stringify({
-                tab: [
-                  ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
-                  ["-", "-", "-", "3", "-", "-", "-", "3", "-", "-", "-", "3", "-", "-", "-", "-"],
-                  ["-", "-", "0", "-", "0", "-", "-", "0", "-", "-", "-", "0", "-", "-", "-", "-"],
-                  ["-", "2", "-", "-", "-", "2", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
-                  ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
-                  ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]
-                ],
-                repeat: 2,
-                chords: ["", "G", "", "", "", "C", "", "", "", "G", "", "", "", "C", "", ""]
-              })
+              id: "v_wywh_orig",
+              name: "Original",
+              capo: 0,
+              tuning: "Estándar",
+              sectionsJson: wywhSections,
+              isDefault: true
             },
             {
-              name: "Coro",
-              type: "chords",
-              content: JSON.stringify([
-                {
-                  chords: [{ name: "C", beats: 4 }, { name: "D", beats: 4 }],
-                  repeat: 1
-                },
-                {
-                  chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 4 }],
-                  repeat: 1
-                },
-                {
-                  chords: [{ name: "D", beats: 4 }, { name: "C", beats: 4 }],
-                  repeat: 1
-                },
-                {
-                  chords: [{ name: "Am", beats: 4 }, { name: "G", beats: 8 }],
-                  repeat: 1
-                }
-              ])
+              id: "v_wywh_capo2",
+              name: "Acordes con Capo 2",
+              capo: 2,
+              tuning: "Estándar",
+              sectionsJson: wywhSections,
+              isDefault: false
             }
-          ]),
-          updatedDate: 17189100
+          ],
+          defaultVersionId: "v_wywh_orig"
         },
         {
           id: 17189200,
@@ -112,35 +171,19 @@ export default function App() {
           artist: "Ritchie Valens",
           capo: 2,
           tuning: "Estándar",
-          sectionsJson: JSON.stringify([
+          sectionsJson: lbSections,
+          updatedDate: 17189200,
+          versions: [
             {
-              name: "Puente Riff",
-              type: "tab",
-              content: JSON.stringify({
-                tab: [
-                  ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
-                  ["-", "-", "-", "1", "3", "1", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
-                  ["-", "-", "2", "-", "-", "-", "2", "0", "-", "-", "-", "0", "-", "-", "-", "-"],
-                  ["-", "3", "-", "-", "-", "-", "-", "-", "2", "3", "2", "-", "-", "-", "-", "-"],
-                  ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "3", "-", "-", "-", "-"],
-                  ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]
-                ],
-                repeat: 1,
-                chords: ["", "", "C", "", "F", "", "", "G", "", "", "C", "", "F", "", "G", ""]
-              })
-            },
-            {
-              name: "Verso",
-              type: "chords",
-              content: JSON.stringify([
-                {
-                  chords: [{ name: "C", beats: 2 }, { name: "F", beats: 2 }, { name: "G", beats: 4 }],
-                  repeat: 4
-                }
-              ])
+              id: "v_lb_orig",
+              name: "Original",
+              capo: 2,
+              tuning: "Estándar",
+              sectionsJson: lbSections,
+              isDefault: true
             }
-          ]),
-          updatedDate: 17189200
+          ],
+          defaultVersionId: "v_lb_orig"
         }
       ];
       setSongs(defaultSongs);
@@ -157,28 +200,86 @@ export default function App() {
     };
   }, []);
 
-  const handleSaveSyncUrl = (url: string) => {
+  const handleSaveSyncUrl = (url: string, newSheetUrl?: string) => {
     setSyncUrl(url);
     He.setItem("chordmap_sync_url", url);
+    if (newSheetUrl !== undefined) {
+      setSheetUrl(newSheetUrl);
+      He.setItem("chordmap_sheet_url", newSheetUrl);
+    }
     setSyncStatus("success");
     setSyncMessage("¡Configuración guardada de manera segura!");
   };
 
   const handleAddSong = () => {
+    setShowNewSongModal(true);
+  };
+
+  const handleCreateSong = ({
+    title,
+    artist,
+    useTemplate
+  }: {
+    title: string;
+    artist: string;
+    useTemplate: boolean;
+  }) => {
     const now = Date.now();
-    const newSong: Song = {
-      id: now,
-      title: "",
-      artist: "",
+    let initialSections: Section[] = [];
+
+    if (useTemplate) {
+      initialSections = [
+        {
+          name: "Verso",
+          type: "chords",
+          content: JSON.stringify([{ chords: [], repeat: 1 }])
+        },
+        {
+          name: "Pre-coro",
+          type: "chords",
+          content: JSON.stringify([{ chords: [], repeat: 1 }])
+        },
+        {
+          name: "Coro",
+          type: "chords",
+          content: JSON.stringify([{ chords: [], repeat: 1 }])
+        },
+        {
+          name: "Puente",
+          type: "chords",
+          content: JSON.stringify([{ chords: [], repeat: 1 }])
+        }
+      ];
+    }
+
+    const newVersionId = `v_${now}`;
+    const defaultVersion = {
+      id: newVersionId,
+      name: "Original",
       capo: 0,
       tuning: "Estándar",
-      sectionsJson: JSON.stringify([]),
-      updatedDate: now
+      sectionsJson: JSON.stringify(initialSections),
+      isDefault: true,
+      lyrics: ""
     };
+
+    const newSong: Song = {
+      id: now,
+      title: title || "Nueva Canción",
+      artist: artist || "",
+      capo: 0,
+      tuning: "Estándar",
+      sectionsJson: JSON.stringify(initialSections),
+      updatedDate: now,
+      versions: [defaultVersion],
+      defaultVersionId: newVersionId
+    };
+
     const updatedSongs = [newSong, ...songs];
     setSongs(updatedSongs);
     He.setItem("chordmap_songs", JSON.stringify(updatedSongs));
     setSelectedSongId(now);
+    setShowNewSongModal(false);
   };
 
   const handleUpdateSong = (updatedFields: Partial<Song>) => {
@@ -229,16 +330,22 @@ export default function App() {
     try {
       const payload = {
         action,
-        songs: action === 'upload' ? songs.map(s => ({
-          title: s.title,
-          artist: s.artist,
-          sectionsJson: s.sectionsJson,
-          updatedDate: s.updatedDate,
-          lyrics: s.lyrics || "",
-          scrollSpeed: s.scrollSpeed || 0,
-          capo: s.capo || 0,
-          tuning: s.tuning || "Estándar"
-        })) : []
+        songs: action === 'upload' ? songs.map(s => {
+          const principal = getPrincipalVersion(s);
+          const allVersions = ensureSongVersions(s);
+          return {
+            title: s.title,
+            artist: s.artist,
+            sectionsJson: principal.sectionsJson || s.sectionsJson || "[]",
+            updatedDate: s.updatedDate,
+            lyrics: principal.lyrics ?? s.lyrics ?? "",
+            scrollSpeed: s.scrollSpeed || 0,
+            capo: principal.capo ?? s.capo ?? 0,
+            tuning: principal.tuning || s.tuning || "Estándar",
+            versionsJson: JSON.stringify(allVersions),
+            defaultVersionId: s.defaultVersionId || principal.id
+          };
+        }) : []
       };
 
       const response = await fetch(syncUrl, {
@@ -269,33 +376,62 @@ export default function App() {
             return sTitle === cTitle && sArtist === cArtist;
           });
 
+          const cloudVersions = parseCloudVersions(cSong.versionsJson);
+
           if (matchIndex !== -1) {
             if (action === 'download' || Number(cSong.updatedDate) > Number(mergedSongs[matchIndex].updatedDate)) {
+              const existing = mergedSongs[matchIndex];
+              const resolvedVersions = cloudVersions || existing.versions || ensureSongVersions({
+                ...existing,
+                capo: (cSong.capo !== undefined && cSong.capo !== null && cSong.capo !== "") ? Number(cSong.capo) : (existing.capo ?? 0),
+                tuning: (cSong.tuning && cSong.tuning !== "") ? cSong.tuning : (existing.tuning || "Estándar"),
+                sectionsJson: cSong.sectionsJson || "[]",
+                lyrics: cSong.lyrics || ""
+              });
+
               mergedSongs[matchIndex] = {
-                ...mergedSongs[matchIndex],
+                ...existing,
                 sectionsJson: cSong.sectionsJson || "[]",
                 lyrics: cSong.lyrics || "",
                 scrollSpeed: cSong.scrollSpeed !== undefined ? Number(cSong.scrollSpeed) : 0,
                 capo: (cSong.capo !== undefined && cSong.capo !== null && cSong.capo !== "")
                   ? Number(cSong.capo)
-                  : (mergedSongs[matchIndex].capo ?? 0),
+                  : (existing.capo ?? 0),
                 tuning: (cSong.tuning && cSong.tuning !== "") 
                   ? cSong.tuning 
-                  : (mergedSongs[matchIndex].tuning || "Estándar"),
-                updatedDate: Number(cSong.updatedDate) || Date.now()
+                  : (existing.tuning || "Estándar"),
+                updatedDate: Number(cSong.updatedDate) || Date.now(),
+                versions: resolvedVersions,
+                defaultVersionId: resolvedVersions.find(v => v.isDefault)?.id || resolvedVersions[0]?.id
               };
             }
           } else {
+            const rawCapo = (cSong.capo !== undefined && cSong.capo !== null && cSong.capo !== "") ? Number(cSong.capo) : 0;
+            const rawTuning = cSong.tuning || "Estándar";
+            const rawSections = cSong.sectionsJson || "[]";
+            const rawLyrics = cSong.lyrics || "";
+            const resolvedVersions = cloudVersions || [{
+              id: `v_orig_${Number(cSong.updatedDate) || Date.now()}`,
+              name: "Original",
+              capo: rawCapo,
+              tuning: rawTuning,
+              sectionsJson: rawSections,
+              lyrics: rawLyrics,
+              isDefault: true
+            }];
+
             mergedSongs.push({
               id: Number(cSong.updatedDate) || Date.now(),
               title: cSong.title || "",
               artist: cSong.artist || "",
-              capo: (cSong.capo !== undefined && cSong.capo !== null && cSong.capo !== "") ? Number(cSong.capo) : 0,
-              tuning: cSong.tuning || "Estándar",
-              sectionsJson: cSong.sectionsJson || "[]",
-              lyrics: cSong.lyrics || "",
+              capo: rawCapo,
+              tuning: rawTuning,
+              sectionsJson: rawSections,
+              lyrics: rawLyrics,
               scrollSpeed: cSong.scrollSpeed !== undefined ? Number(cSong.scrollSpeed) : 0,
-              updatedDate: Number(cSong.updatedDate) || Date.now()
+              updatedDate: Number(cSong.updatedDate) || Date.now(),
+              versions: resolvedVersions,
+              defaultVersionId: resolvedVersions.find(v => v.isDefault)?.id || resolvedVersions[0]?.id
             });
           }
         });
@@ -345,8 +481,20 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quick Cloud Status Indicator */}
+          {/* Quick Actions in Header: Direct Excel Link + Cloud Status */}
           <div className="flex items-center gap-2">
+            <a
+              href={sheetUrl || "https://sheets.google.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Abrir tu hoja de cálculo directamente en Google Sheets / Excel"
+              className="flex items-center gap-1.5 font-sans text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-200/80 px-3 py-1.5 rounded-full cursor-pointer transition-colors shadow-2xs group"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
+              <span>Excel</span>
+              <ExternalLink className="w-2.5 h-2.5 text-emerald-500 opacity-60 group-hover:opacity-100" />
+            </a>
+
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.94 }}
@@ -358,8 +506,11 @@ export default function App() {
                 syncStatus === 'success' ? 'bg-emerald-500' :
                 syncStatus === 'error' ? 'bg-rose-500' : 'bg-zinc-400'
               }`} />
-              <span>
+              <span className="hidden xs:inline">
                 {syncUrl ? "Nube Activa" : "Configurar Nube"}
+              </span>
+              <span className="xs:hidden">
+                {syncUrl ? "Nube" : "Configurar"}
               </span>
             </motion.button>
           </div>
@@ -379,6 +530,7 @@ export default function App() {
               >
                 <SongEditor
                   song={selectedSong}
+                  allSongs={songs}
                   isSaving={isSaving}
                   onUpdateSong={handleUpdateSong}
                   onDeleteSong={handleDeleteSong}
@@ -419,10 +571,18 @@ export default function App() {
       {showSyncModal && (
         <SyncSettingsModal
           webAppUrl={syncUrl}
+          sheetUrl={sheetUrl}
           onSave={handleSaveSyncUrl}
           onClose={() => setShowSyncModal(false)}
         />
       )}
+
+      {/* New Song Modal with Chord Template Prompt */}
+      <NewSongModal
+        isOpen={showNewSongModal}
+        onClose={() => setShowNewSongModal(false)}
+        onCreateSong={handleCreateSong}
+      />
     </div>
   );
 }

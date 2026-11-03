@@ -1,10 +1,12 @@
 import React from 'react';
 import { 
   Music, CloudUpload, CloudDownload, Settings, Search, 
-  FileText, ChevronRight, Plus, Sparkles, X, Layers
+  FileText, ChevronRight, Plus, Sparkles, X, Layers, GitBranch, Star,
+  FileSpreadsheet, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Song } from '../types';
+import { getPrincipalVersion } from '../utils/versionUtils';
 
 interface SongListProps {
   songs: Song[];
@@ -96,6 +98,18 @@ export const SongList: React.FC<SongListProps> = ({
             <CloudDownload className={`w-4 h-4 text-emerald-500 ${syncStatus === "loading" ? "animate-bounce" : ""}`} />
             <span>Bajar</span>
           </motion.button>
+
+          <a
+            href={localStorage.getItem("chordmap_sheet_url") || "https://sheets.google.com"}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Abrir tu hoja de cálculo directamente en Google Sheets / Excel"
+            className="py-2 px-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span className="hidden xs:inline">Excel</span>
+            <ExternalLink className="w-2.5 h-2.5 text-emerald-500 opacity-60" />
+          </a>
 
           <motion.button
             whileHover={{ scale: 1.08, rotate: 30 }}
@@ -208,7 +222,12 @@ export const SongList: React.FC<SongListProps> = ({
 
           <div className="grid grid-cols-1 gap-2.5">
             {filteredSongs.map((song, idx) => {
-              const secCount = getSectionCount(song.sectionsJson);
+              const principal = getPrincipalVersion(song);
+              const secCount = getSectionCount(principal.sectionsJson || song.sectionsJson);
+              const hasMultipleVersions = song.versions && song.versions.length > 1;
+              const capoVal = principal.capo ?? song.capo ?? 0;
+              const tuningVal = principal.tuning || song.tuning || "Estándar";
+
               return (
                 <motion.div
                   key={song.id}
@@ -235,16 +254,32 @@ export const SongList: React.FC<SongListProps> = ({
                     
                     {/* Tags */}
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {(song.capo ?? 0) > 0 && (
+                      {hasMultipleVersions && (
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 font-sans text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 shadow-2xs">
+                          <GitBranch className="w-2.5 h-2.5 text-amber-600 stroke-[2.5]" />
+                          {song.versions!.length} versiones
+                        </span>
+                      )}
+
+                      {hasMultipleVersions && (
+                        <span className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-700 font-sans text-[10px] font-semibold px-2 py-0.5 rounded-full border border-zinc-200">
+                          <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
+                          <span className="font-medium text-zinc-500">Principal:</span> {principal.name}
+                        </span>
+                      )}
+
+                      {capoVal > 0 && (
                         <span className="bg-amber-50 text-amber-800 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
-                          Capo {song.capo}
+                          Capo {capoVal}
                         </span>
                       )}
-                      {song.tuning && song.tuning !== "Estándar" && (
+
+                      {tuningVal !== "Estándar" && (
                         <span className="bg-sky-50 text-sky-800 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border border-sky-200">
-                          {song.tuning}
+                          {tuningVal}
                         </span>
                       )}
+
                       {secCount > 0 ? (
                         <span className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-700 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border border-zinc-200">
                           <Layers className="w-2.5 h-2.5 text-zinc-400" />

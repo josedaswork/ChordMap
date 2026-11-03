@@ -54,12 +54,73 @@ export const DEFAULT_CHORD_SHAPES: Record<string, ChordShape> = {
   "B7": { frets: ['x', 2, 1, 2, 0, 2], fingers: [0, 2, 1, 3, 0, 4], baseFret: 1 }
 };
 
-export function getChordShape(chordName: string, customChords: Record<string, ChordShape> = {}): ChordShape {
+export const GLOBAL_CUSTOM_CHORDS_KEY = "chordmap_global_custom_chords";
+
+export function getGlobalCustomChords(allSongs?: any[]): Record<string, ChordShape> {
+  const result: Record<string, ChordShape> = {};
+
+  // 1. Load from all registered songs metadata
+  if (Array.isArray(allSongs)) {
+    allSongs.forEach(song => {
+      if (song && song.sectionsJson) {
+        try {
+          const custom = loadCustomChords(song.sectionsJson);
+          Object.assign(result, custom);
+        } catch {}
+      }
+    });
+  }
+
+  // 2. Load from localStorage (latest edits)
+  try {
+    const raw = localStorage.getItem(GLOBAL_CUSTOM_CHORDS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        Object.assign(result, parsed);
+      }
+    }
+  } catch {}
+
+  return result;
+}
+
+export function saveGlobalCustomChord(name: string, shape: ChordShape): void {
+  try {
+    const current = getGlobalCustomChords();
+    current[name.trim()] = shape;
+    localStorage.setItem(GLOBAL_CUSTOM_CHORDS_KEY, JSON.stringify(current));
+  } catch (e) {
+    console.error("Error saving global custom chord", e);
+  }
+}
+
+export function deleteGlobalCustomChord(name: string): void {
+  try {
+    const current = getGlobalCustomChords();
+    delete current[name.trim()];
+    localStorage.setItem(GLOBAL_CUSTOM_CHORDS_KEY, JSON.stringify(current));
+  } catch (e) {
+    console.error("Error deleting global custom chord", e);
+  }
+}
+
+export function getChordShape(
+  chordName: string, 
+  customChords: Record<string, ChordShape> = {},
+  allSongs?: any[]
+): ChordShape {
   // Normalize key slightly
   const normalized = chordName.trim();
   
   if (customChords[normalized]) {
     return customChords[normalized];
+  }
+
+  // Check global custom chords
+  const globalCustom = getGlobalCustomChords(allSongs);
+  if (globalCustom[normalized]) {
+    return globalCustom[normalized];
   }
   
   if (DEFAULT_CHORD_SHAPES[normalized]) {

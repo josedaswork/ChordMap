@@ -1,12 +1,16 @@
 import React from 'react';
-import { Plus, Minus, Trash2, FileText, Check, AlertTriangle, AlertCircle, X, RotateCcw, Edit3, Eye, ZoomIn, ZoomOut } from 'lucide-react';
+import { Plus, Minus, Trash2, FileText, Check, AlertTriangle, AlertCircle, X, RotateCcw, Edit3, Eye, ZoomIn, ZoomOut, Flame, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TabContent } from '../types';
+import { TabContent, Song } from '../types';
 import { parseTextTab } from '../utils/tabParser';
+import { getCommonChords } from '../utils/chordFrequency';
+import { getGlobalCustomChords, ChordShape } from '../utils/chordShapes';
 
 interface TabSectionEditorProps {
   content: string;
   onChange: (content: string) => void;
+  allSongs?: Song[];
+  customChords?: Record<string, ChordShape>;
 }
 
 const STRINGS = ["e", "B", "G", "D", "A", "E"];
@@ -24,7 +28,22 @@ const TECHNIQUES = [
 export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
   content,
   onChange,
+  allSongs = [],
+  customChords = {},
 }) => {
+  const commonChords = React.useMemo(() => {
+    return getCommonChords(allSongs);
+  }, [allSongs]);
+
+  const globalCustomChords = React.useMemo(() => {
+    const globalDict = getGlobalCustomChords(allSongs);
+    return { ...globalDict, ...customChords };
+  }, [allSongs, customChords]);
+
+  const customChordNames = React.useMemo(() => {
+    return Object.keys(globalCustomChords);
+  }, [globalCustomChords]);
+
   const createEmptyTab = (cols = 16): string[][] => {
     return Array(6).fill(null).map(() => Array(cols).fill("-"));
   };
@@ -624,16 +643,67 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                     value={currentValue}
                     onChange={e => handleUpdateValue(e.target.value)}
                     placeholder="Escribir acorde..."
-                    className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 font-bold focus:outline-none focus:ring-2 focus:ring-amber-400/40 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+                    className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-zinc-200 font-bold focus:outline-none focus:ring-2 focus:ring-amber-400/40 bg-zinc-50 text-zinc-900 font-serif"
                   />
                   <motion.button
                     whileTap={{ scale: 0.90 }}
                     onClick={() => handleUpdateValue("")}
-                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 rounded-xl text-xs font-bold cursor-pointer"
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold cursor-pointer"
                   >
                     Borrar
                   </motion.button>
                 </div>
+
+                {/* Common Chords suggestions */}
+                {commonChords.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-orange-500 fill-orange-500" />
+                      <span>Frecuentes en tu repertorio:</span>
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {commonChords.slice(0, 10).map(ac => (
+                        <motion.button
+                          key={ac.name}
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.90 }}
+                          type="button"
+                          onClick={() => handleUpdateValue(ac.name)}
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-xs font-bold text-amber-900 rounded-xl cursor-pointer transition-colors border border-amber-200 flex items-center gap-1"
+                        >
+                          <span>{ac.name}</span>
+                          <span className="font-mono text-[9px] text-amber-600 bg-amber-200/50 px-1 rounded-full">{ac.count}</span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Saved Custom / Rare Chords */}
+                {customChordNames.length > 0 && (
+                  <div className="space-y-1.5 bg-amber-50/50 p-2 rounded-xl border border-amber-200">
+                    <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-500" />
+                      <span>Personalizados / Raros:</span>
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {customChordNames.map(ac => (
+                        <motion.button
+                          key={ac}
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.90 }}
+                          type="button"
+                          onClick={() => handleUpdateValue(ac)}
+                          className="px-2 py-0.5 bg-white hover:bg-amber-100 text-xs font-bold text-zinc-900 rounded-xl cursor-pointer transition-colors border border-amber-300 flex items-center gap-1 shadow-2xs"
+                        >
+                          <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
+                          <span>{ac}</span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
                     Acordes rápidos:
@@ -646,7 +716,7 @@ export const TabSectionEditor: React.FC<TabSectionEditorProps> = ({
                         whileTap={{ scale: 0.90 }}
                         type="button"
                         onClick={() => handleUpdateValue(ac)}
-                        className="px-2.5 py-1 bg-zinc-100 hover:bg-amber-100 dark:bg-zinc-800 dark:hover:bg-amber-950/50 text-xs font-bold text-zinc-800 dark:text-zinc-200 rounded-xl cursor-pointer transition-colors border border-zinc-200 dark:border-zinc-700"
+                        className="px-2.5 py-1 bg-zinc-100 hover:bg-amber-100 text-xs font-bold text-zinc-800 rounded-xl cursor-pointer transition-colors border border-zinc-200"
                       >
                         {ac}
                       </motion.button>

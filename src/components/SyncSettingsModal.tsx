@@ -1,19 +1,22 @@
 import React from 'react';
-import { Cloud, X, Save, HelpCircle, ExternalLink, Check, Copy, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
+import { Cloud, X, Save, HelpCircle, ExternalLink, Check, Copy, AlertCircle, RefreshCw, Smartphone, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SyncSettingsModalProps {
   webAppUrl: string;
-  onSave: (url: string) => void;
+  sheetUrl?: string;
+  onSave: (url: string, sheetUrl?: string) => void;
   onClose: () => void;
 }
 
 export const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
   webAppUrl,
+  sheetUrl = "",
   onSave,
   onClose,
 }) => {
   const [url, setUrl] = React.useState(webAppUrl);
+  const [spreadsheetUrl, setSpreadsheetUrl] = React.useState(sheetUrl);
   const [copied, setCopied] = React.useState(false);
   const [showGuide, setShowGuide] = React.useState(true);
 
@@ -24,7 +27,7 @@ export const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
   };
 
   const handleSave = () => {
-    onSave(url.trim());
+    onSave(url.trim(), spreadsheetUrl.trim());
     onClose();
   };
 
@@ -69,14 +72,14 @@ export const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
         {/* Content Body */}
         <div className="p-5 overflow-y-auto space-y-4 flex-1 select-text">
           
-          {/* Important Notice regarding Capo & Apps Script update */}
+          {/* Important Notice regarding Apps Script update */}
           <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs space-y-1.5 shadow-2xs">
             <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
               <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>¿El capo no se guarda o ya usabas la hoja antes?</span>
+              <span>¿Necesitas actualizar el código de Apps Script?</span>
             </div>
             <p className="leading-relaxed text-[11px] text-amber-900/90 dark:text-amber-200/90">
-              <strong>Sí, debes actualizar el código de tu Google Apps Script</strong>. La versión anterior de la hoja no tenía la columna para <em>Capo</em> ni <em>Afinación</em>. Copia el código actualizado de abajo, pégalo en tu Apps Script y haz clic en <strong>Implementar &gt; Administrar implementaciones &gt; Editar &gt; Versión: Nueva versión</strong>.
+              <strong>No es obligatorio</strong> para seguir sincronizando la versión principal de tus canciones (acordes, capo, afinación y letra seguirán funcionando). Pero <strong>sí es muy recomendable</strong> actualizarlo si quieres que tus <em>diferentes versiones</em> (acústica, capo alternativo, afinaciones raras, etc.) también se guarden y sincronicen entre múltiples dispositivos. ¡La actualización es automática y no borra tus canciones existentes!
             </p>
           </div>
 
@@ -93,14 +96,42 @@ export const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
                 placeholder="https://script.google.com/macros/s/.../exec"
                 className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50 shadow-2xs"
               />
+            </div>
+          </div>
+
+          {/* Direct Spreadsheet / Excel URL */}
+          <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 space-y-2 shadow-inner">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Enlace directo a tu Hoja de Cálculo (Google Sheets / Excel):</span>
+              </label>
+              <a
+                href={spreadsheetUrl || "https://sheets.google.com"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline inline-flex items-center gap-1"
+              >
+                <span>Abrir ahora</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="url"
+                value={spreadsheetUrl}
+                onChange={e => setSpreadsheetUrl(e.target.value)}
+                placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+                className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-emerald-300/80 dark:border-emerald-700/80 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-2xs"
+              />
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSave}
-                className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold text-xs rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs transition-colors"
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs transition-colors"
               >
                 <Save className="w-3.5 h-3.5" />
-                <span>Guardar URL</span>
+                <span>Guardar Configuración</span>
               </motion.button>
             </div>
           </div>
@@ -164,7 +195,7 @@ export const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
                   <div className="space-y-2 pt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                        Código Apps Script v2 (con soporte para Capo y Afinación):
+                        Código Apps Script v3 (Multi-Versiones, Capo y Afinación):
                       </span>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -222,34 +253,34 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
     
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     
-    // Auto-migrate or initialize sheet to 8-column structure (including Capo and Tuning)
+    // Auto-migrate or initialize sheet to 9-column structure (including Capo, Tuning, and Versions JSON)
     var lastRow = sheet.getLastRow();
     var lastCol = sheet.getLastColumn();
-    var headers = lastRow > 0 ? sheet.getRange(1, 1, 1, Math.max(8, lastCol)).getValues()[0] : [];
+    var headers = lastRow > 0 ? sheet.getRange(1, 1, 1, Math.max(9, lastCol)).getValues()[0] : [];
     
-    var hasCapoCol = false;
+    var hasVersionsCol = false;
     for (var h = 0; h < headers.length; h++) {
-      if (String(headers[h]).trim().toLowerCase() === "capo") {
-        hasCapoCol = true;
+      if (String(headers[h]).trim().toLowerCase().indexOf("versiones") !== -1) {
+        hasVersionsCol = true;
         break;
       }
     }
     
     if (lastRow === 0) {
-      sheet.appendRow(["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización"]);
-      sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#FFFBEB");
-    } else if (!hasCapoCol || lastCol < 8) {
-      // Migrate old sheet structures (4-column or 6-column) to 8-column sheet
+      sheet.appendRow(["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización", "Versiones JSON"]);
+      sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#FFFBEB");
+    } else if (!hasVersionsCol || lastCol < 9) {
+      // Migrate old sheet structures (4, 6, or 8 columns) to 9 columns
       var oldData = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
       
       // Clear old range
-      sheet.getRange(1, 1, lastRow, Math.max(8, lastCol)).clearContent();
+      sheet.getRange(1, 1, lastRow, Math.max(9, lastCol)).clearContent();
       
       // Set new headers
-      sheet.getRange(1, 1, 1, 8).setValues([["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización"]]);
-      sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#FFFBEB");
+      sheet.getRange(1, 1, 1, 9).setValues([["Título", "Artista", "Secciones JSON", "Letra", "Velocidad", "Capo", "Afinación", "Fecha de Sincronización", "Versiones JSON"]]);
+      sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#FFFBEB");
       
-      // Re-insert migrated data
+      // Re-insert migrated data safely
       if (oldData.length > 0) {
         var migratedData = [];
         for (var m = 0; m < oldData.length; m++) {
@@ -261,6 +292,7 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
           var capo = 0;
           var tuning = "Estándar";
           var updatedDate = 0;
+          var versionsJson = "";
           
           if (lastCol <= 4) {
             updatedDate = oldData[m][3] || 0;
@@ -268,12 +300,19 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
             lyrics = oldData[m][3] || "";
             scrollSpeed = oldData[m][4] !== undefined ? Number(oldData[m][4]) : 0;
             updatedDate = oldData[m][5] || 0;
+          } else if (lastCol === 8) {
+            lyrics = oldData[m][3] || "";
+            scrollSpeed = oldData[m][4] !== undefined ? Number(oldData[m][4]) : 0;
+            capo = oldData[m][5] !== undefined ? Number(oldData[m][5]) : 0;
+            tuning = oldData[m][6] || "Estándar";
+            updatedDate = oldData[m][7] || 0;
           } else {
             lyrics = oldData[m][3] || "";
             scrollSpeed = oldData[m][4] !== undefined ? Number(oldData[m][4]) : 0;
             capo = oldData[m][5] !== undefined ? Number(oldData[m][5]) : 0;
             tuning = oldData[m][6] || "Estándar";
             updatedDate = oldData[m][7] || 0;
+            versionsJson = oldData[m][8] || "";
           }
           
           migratedData.push([
@@ -284,15 +323,16 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
             scrollSpeed,
             capo,
             tuning,
-            updatedDate
+            updatedDate,
+            versionsJson
           ]);
         }
-        sheet.getRange(2, 1, migratedData.length, 8).setValues(migratedData);
+        sheet.getRange(2, 1, migratedData.length, 9).setValues(migratedData);
       }
     }
     
     var numRows = sheet.getLastRow();
-    var dataRange = numRows > 1 ? sheet.getRange(2, 1, numRows - 1, 8).getValues() : [];
+    var dataRange = numRows > 1 ? sheet.getRange(2, 1, numRows - 1, 9).getValues() : [];
     
     var songRowMap = {};
     for (var i = 0; i < dataRange.length; i++) {
@@ -316,6 +356,7 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
           sheet.getRange(existingRow, 6).setValue(valSong.capo !== undefined ? Number(valSong.capo) : 0);
           sheet.getRange(existingRow, 7).setValue(valSong.tuning || "Estándar");
           sheet.getRange(existingRow, 8).setValue(valSong.updatedDate);
+          sheet.getRange(existingRow, 9).setValue(valSong.versionsJson || "");
         }
       } else {
         sheet.appendRow([
@@ -326,12 +367,13 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
           valSong.scrollSpeed || 0, 
           valSong.capo !== undefined ? Number(valSong.capo) : 0,
           valSong.tuning || "Estándar",
-          valSong.updatedDate
+          valSong.updatedDate,
+          valSong.versionsJson || ""
         ]);
       }
     }
     
-    var finalDataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
+    var finalDataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).getValues();
     var resultSongs = [];
     for (var k = 0; k < finalDataRange.length; k++) {
       resultSongs.push({
@@ -342,7 +384,8 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
         scrollSpeed: finalDataRange[k][4] !== undefined ? Number(finalDataRange[k][4]) : 0,
         capo: finalDataRange[k][5] !== undefined ? Number(finalDataRange[k][5]) : 0,
         tuning: finalDataRange[k][6] || "Estándar",
-        updatedDate: Number(finalDataRange[k][7])
+        updatedDate: Number(finalDataRange[k][7]),
+        versionsJson: finalDataRange[k][8] || ""
       });
     }
     
